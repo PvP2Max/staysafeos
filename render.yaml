@@ -15,6 +15,8 @@ services:
     envVars:
       - key: TRUST_PROXY_HEADER
         value: "1"
+      - key: PORT
+        value: "3001"
       - key: DB_URL
         fromDatabase:
           name: staysafeos-db
@@ -22,7 +24,31 @@ services:
       - key: ENDPOINT
         value: https://auth.staysafeos.com
       - key: ADMIN_ENDPOINT
-        value: https://auth.staysafeos.com/admin
+        value: https://auth-admin.staysafeos.com
+
+  # =====================================
+  # Logto Admin Console
+  # =====================================
+  - type: web
+    name: staysafeos-logto-admin
+    runtime: docker
+    dockerfilePath: ./infra/logto/Dockerfile
+    dockerContext: ./infra/logto
+    region: oregon
+    plan: starter
+    envVars:
+      - key: TRUST_PROXY_HEADER
+        value: "1"
+      - key: PORT
+        value: "3002"
+      - key: DB_URL
+        fromDatabase:
+          name: staysafeos-db
+          property: connectionString
+      - key: ENDPOINT
+        value: https://auth.staysafeos.com
+      - key: ADMIN_ENDPOINT
+        value: https://auth-admin.staysafeos.com
 
   # =====================================
   # Core API - NestJS
