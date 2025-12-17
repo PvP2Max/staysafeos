@@ -32,3 +32,46 @@ export {
 } from "./components/dialog";
 export { Separator } from "./components/separator";
 export { Badge, badgeVariants, type BadgeProps } from "./components/badge";
+export { Textarea } from "./components/textarea";
+export { Skeleton } from "./components/skeleton";
+export { Switch } from "./components/switch";
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/tabs";
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+} from "./components/select";
+export { Avatar, AvatarImage, AvatarFallback } from "./components/avatar";
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+} from "./components/dropdown-menu";
+export {
+  type ToastProps,
+  type ToastActionElement,
+  ToastProvider,
+  ToastViewport,
+  Toast,
+  ToastTitle,
+  ToastDescription,
+  ToastClose,
+  ToastAction,
+} from "./components/toast";

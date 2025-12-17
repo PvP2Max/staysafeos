@@ -18,6 +18,11 @@ model Account {
   firstName   String?  @map("first_name")
   lastName    String?  @map("last_name")
   phone       String?
+  rank        String?  // Military rank
+  unit        String?  // Military unit/organization
+  homeLat     Float?   @map("home_lat")
+  homeLng     Float?   @map("home_lng")
+  homeAddress String?  @map("home_address")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -60,6 +65,10 @@ model Organization {
   vans               Van[]
   rides              Ride[]
   settings           OrganizationSettings?
+  trainingModules    TrainingModule[]
+  shifts             Shift[]
+  supportCodes       SupportCode[]
+  vanTransfers       VanTransfer[]
 
   @@map("organizations")
 }
@@ -70,12 +79,38 @@ model Membership {
   account        Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   organizationId String       @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  role           String       @default("RIDER")
-  status         String       @default("ACTIVE")
+  role           String       @default("RIDER") // RIDER, SAFETY, DRIVER, TC, DISPATCHER, EXECUTIVE, ADMIN
+  status         String       @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+
+  // Training completion timestamps
+  trainingOrientationAt DateTime? @map("training_orientation_at")
+  trainingSafetyAt      DateTime? @map("training_safety_at")
+  trainingDriverAt      DateTime? @map("training_driver_at")
+  trainingTcAt          DateTime? @map("training_tc_at")
+  trainingDispatcherAt  DateTime? @map("training_dispatcher_at")
+
+  // Override role for support access
+  overrideRole   String?   @map("override_role")
+  overrideExpiry DateTime? @map("override_expiry")
+
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
+  // Relations
+  driverRides          Ride[]               @relation("RideDriver")
+  tcRides              Ride[]               @relation("RideTC")
+  dispatcherRides      Ride[]               @relation("RideDispatcher")
+  drivenVans           Van[]                @relation("VanDriver")
+  tcVans               Van[]                @relation("VanTC")
+  trainingCompletions  TrainingCompletion[]
+  shiftSignups         ShiftSignup[]
+  transfersRequested   VanTransfer[]        @relation("TransferRequester")
+  transfersTo          VanTransfer[]        @relation("TransferTo")
+  supportCodesCreated  SupportCode[]
+  codeRedemptions      SupportCodeRedemption[]
+
   @@unique([accountId, organizationId])
+  @@index([organizationId, role])
   @@map("memberships")
 }
 
@@ -142,6 +177,7 @@ model OrganizationSettings {
   organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   active                 Boolean      @default(true)
+  activeSince            DateTime?    @map("active_since")
   dispatcherEnabled      Boolean      @default(true) @map("dispatcher_enabled")
   driverEnabled          Boolean      @default(true) @map("driver_enabled")
   safetyEnabled          Boolean      @default(true) @map("safety_enabled")
@@ -153,6 +189,7 @@ model OrganizationSettings {
   autoDisableTime        String?      @map("auto_disable_time")
   autoDisableTz          String?      @map("auto_disable_tz")
   nightBriefVideoId      String?      @map("night_brief_video_id")
+  contactEmail           String?      @map("contact_email")
 
   @@map("organization_settings")
 }
@@ -164,21 +201,79 @@ model Van {
   name           String
   capacity       Int          @default(6)
   licensePlate   String?      @map("license_plate")
-  status         String       @default("AVAILABLE") // AVAILABLE, IN_USE, MAINTENANCE
+  status         String       @default("AVAILABLE") // AVAILABLE, IN_USE, MAINTENANCE, OFFLINE
   currentLat     Float?       @map("current_lat")
   currentLng     Float?       @map("current_lng")
+  heading        Float?       // Direction in degrees
+  speed          Float?       // Speed in mph
+  passengerCount Int          @default(0) @map("passenger_count")
+  lastPing       DateTime?    @map("last_ping")
+
+  // Current crew assignment
+  driverId       String?      @map("driver_id")
+  driver         Membership?  @relation("VanDriver", fields: [driverId], references: [id])
+  tcId           String?      @map("tc_id")
+  tc             Membership?  @relation("VanTC", fields: [tcId], references: [id])
+
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  rides          Ride[]
+  // Relations
+  rides              Ride[]
+  tasks              VanTask[]
+  incomingTransfers  VanTransfer[] @relation("TransferToVan")
+  outgoingTransfers  VanTransfer[] @relation("TransferFromVan")
 
+  @@index([organizationId, status])
   @@map("vans")
+}
+
+model VanTask {
+  id             String    @id @default(cuid())
+  vanId          String    @map("van_id")
+  van            Van       @relation(fields: [vanId], references: [id], onDelete: Cascade)
+  rideId         String?   @map("ride_id")
+  ride           Ride?     @relation(fields: [rideId], references: [id], onDelete: SetNull)
+  type           String    // PICKUP, DROPOFF, CUSTOM
+  address        String
+  lat            Float?
+  lng            Float?
+  position       Int       // Order in task list
+  notes          String?
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([vanId, position])
+  @@map("van_tasks")
+}
+
+model VanTransfer {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vanId          String       @map("van_id")
+  van            Van          @relation("TransferFromVan", fields: [vanId], references: [id])
+  toVanId        String?      @map("to_van_id")
+  toVan          Van?         @relation("TransferToVan", fields: [toVanId], references: [id])
+  requestedById  String       @map("requested_by_id")
+  requestedBy    Membership   @relation("TransferRequester", fields: [requestedById], references: [id])
+  toMembershipId String?      @map("to_membership_id")
+  toMembership   Membership?  @relation("TransferTo", fields: [toMembershipId], references: [id])
+  status         String       @default("PENDING") // PENDING, ACCEPTED, DECLINED, CANCELLED
+  respondedAt    DateTime?    @map("responded_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([organizationId, status])
+  @@map("van_transfers")
 }
 
 model Ride {
   id             String       @id @default(cuid())
   organizationId String       @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Source tracking
+  source         String       @default("REQUEST") // REQUEST, MANUAL, WALK_ON
 
   // Rider info
   riderName      String       @map("rider_name")
@@ -198,19 +293,197 @@ model Ride {
   priority       Int          @default(0)
   notes          String?
 
-  // Assignment
+  // Van assignment
   vanId          String?      @map("van_id")
   van            Van?         @relation(fields: [vanId], references: [id])
+
+  // Crew assignment
+  driverId       String?      @map("driver_id")
+  driver         Membership?  @relation("RideDriver", fields: [driverId], references: [id])
+  tcId           String?      @map("tc_id")
+  tc             Membership?  @relation("RideTC", fields: [tcId], references: [id])
+  dispatcherId   String?      @map("dispatcher_id")
+  dispatcher     Membership?  @relation("RideDispatcher", fields: [dispatcherId], references: [id])
+
+  // Timestamps
   assignedAt     DateTime?    @map("assigned_at")
+  enRouteAt      DateTime?    @map("en_route_at")
   pickedUpAt     DateTime?    @map("picked_up_at")
   completedAt    DateTime?    @map("completed_at")
+  cancelledAt    DateTime?    @map("cancelled_at")
+  cancelReason   String?      @map("cancel_reason")
 
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
+  // Relations
+  review         RideReview?
+  tasks          VanTask[]
+
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
+  @@index([riderPhone])
   @@map("rides")
+}
+
+model RideReview {
+  id        String   @id @default(cuid())
+  rideId    String   @unique @map("ride_id")
+  ride      Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  rating    Int      // 1-5 stars
+  comment   String?
+  bypassed  Boolean  @default(false) // If rider skipped review
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("ride_reviews")
+}
+
+// ========================================
+// Training Models
+// ========================================
+
+model TrainingModule {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  category       String       // ORIENTATION, SAFETY, DRIVER, TC, DISPATCHER
+  videoUrl       String?      @map("video_url")
+  videoId        String?      @map("video_id") // YouTube/Vimeo ID
+  videoDuration  Int?         @map("video_duration") // seconds
+  quizQuestions  Json?        @map("quiz_questions") // Array of {question, options[], correctIndex}
+  passingPercent Int          @default(80) @map("passing_percent")
+  requiredRoles  String[]     @default([]) @map("required_roles") // Roles that must complete
+  sortOrder      Int          @default(0) @map("sort_order")
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  completions    TrainingCompletion[]
+
+  @@index([organizationId, category])
+  @@map("training_modules")
+}
+
+model TrainingCompletion {
+  id               String         @id @default(cuid())
+  trainingModuleId String         @map("training_module_id")
+  trainingModule   TrainingModule @relation(fields: [trainingModuleId], references: [id], onDelete: Cascade)
+  membershipId     String         @map("membership_id")
+  membership       Membership     @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  videoWatchedAt   DateTime?      @map("video_watched_at")
+  quizScore        Int?           @map("quiz_score")
+  quizAttempts     Int            @default(0) @map("quiz_attempts")
+  passed           Boolean        @default(false)
+  completedAt      DateTime?      @map("completed_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@unique([trainingModuleId, membershipId])
+  @@map("training_completions")
+}
+
+// ========================================
+// Shift Management Models
+// ========================================
+
+model Shift {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  role           String       // DRIVER, TC, DISPATCHER, SAFETY
+  startTime      DateTime     @map("start_time")
+  endTime        DateTime     @map("end_time")
+  slotsNeeded    Int          @map("slots_needed")
+  location       String?
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  signups        ShiftSignup[]
+
+  @@index([organizationId, startTime])
+  @@map("shifts")
+}
+
+model ShiftSignup {
+  id           String     @id @default(cuid())
+  shiftId      String     @map("shift_id")
+  shift        Shift      @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  membershipId String     @map("membership_id")
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  status       String     @default("CONFIRMED") // CONFIRMED, CANCELLED, NO_SHOW
+  checkedInAt  DateTime?  @map("checked_in_at")
+  checkedOutAt DateTime?  @map("checked_out_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@unique([shiftId, membershipId])
+  @@map("shift_signups")
+}
+
+// ========================================
+// Support Code Models
+// ========================================
+
+model SupportCode {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String       @unique
+  type           String       // ROLE_ELEVATION, STAFF_ACCESS, INVITE
+  grantedRole    String?      @map("granted_role") // Role to grant
+  expiresAt      DateTime     @map("expires_at")
+  maxUses        Int?         @map("max_uses")
+  usedCount      Int          @default(0) @map("used_count")
+  createdById    String       @map("created_by_id")
+  createdBy      Membership   @relation(fields: [createdById], references: [id])
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  redemptions    SupportCodeRedemption[]
+
+  @@index([code])
+  @@index([organizationId, type])
+  @@map("support_codes")
+}
+
+model SupportCodeRedemption {
+  id            String      @id @default(cuid())
+  supportCodeId String      @map("support_code_id")
+  supportCode   SupportCode @relation(fields: [supportCodeId], references: [id], onDelete: Cascade)
+  membershipId  String      @map("membership_id")
+  membership    Membership  @relation(fields: [membershipId], references: [id])
+  ipAddress     String?     @map("ip_address")
+  userAgent     String?     @map("user_agent")
+  redeemedAt    DateTime    @default(now()) @map("redeemed_at")
+
+  @@unique([supportCodeId, membershipId])
+  @@map("support_code_redemptions")
+}
+
+// ========================================
+// Audit Log Model
+// ========================================
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  actorId        String?  @map("actor_id") // Membership ID of who performed action
+  actorEmail     String?  @map("actor_email")
+  resource       String   // e.g., "ride", "van", "member"
+  resourceId     String?  @map("resource_id")
+  action         String   // e.g., "create", "update", "delete", "assign"
+  changes        Json?    // What changed
+  metadata       Json?    // Additional context
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, resource])
+  @@map("audit_logs")
 }
 
 // ========================================
@@ -219,4 +492,9 @@ model Ride {
 // Roles: RIDER, SAFETY, DRIVER, TC, DISPATCHER, EXECUTIVE, ADMIN
 // Subscription Tiers: free, starter, professional, enterprise
 // Ride Status: PENDING, ASSIGNED, EN_ROUTE, PICKED_UP, COMPLETED, CANCELLED
-// Van Status: AVAILABLE, IN_USE, MAINTENANCE
+// Ride Source: REQUEST, MANUAL, WALK_ON
+// Van Status: AVAILABLE, IN_USE, MAINTENANCE, OFFLINE
+// Transfer Status: PENDING, ACCEPTED, DECLINED, CANCELLED
+// Shift Status: CONFIRMED, CANCELLED, NO_SHOW
+// Training Category: ORIENTATION, SAFETY, DRIVER, TC, DISPATCHER
+// Support Code Type: ROLE_ELEVATION, STAFF_ACCESS, INVITE
