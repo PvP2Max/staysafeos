@@ -1,0 +1,116 @@
+# StaySafeOS v2 - Render Blueprint
+# https://render.com/docs/blueprint-spec
+
+services:
+  # =====================================
+  # Core API - NestJS
+  # =====================================
+  - type: web
+    name: staysafeos-api
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: apps/api
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        fromDatabase:
+          name: staysafeos-db
+          property: connectionString
+      - key: LOGTO_ENDPOINT
+        sync: false
+      - key: LOGTO_AUDIENCE
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://staysafeos.com,https://home.staysafeos.com,https://app.staysafeos.com
+
+  # =====================================
+  # Home - Marketing & Control Plane
+  # =====================================
+  - type: web
+    name: staysafeos-home
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: apps/home
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_BASE_URL
+        value: https://home.staysafeos.com
+      - key: LOGTO_ENDPOINT
+        sync: false
+      - key: LOGTO_APP_ID
+        sync: false
+      - key: LOGTO_APP_SECRET
+        sync: false
+      - key: LOGTO_COOKIE_SECRET
+        generateValue: true
+      - key: LOGTO_API_RESOURCE
+        sync: false
+      - key: API_URL
+        value: https://api.staysafeos.com
+
+  # =====================================
+  # App - Operations Dashboard
+  # =====================================
+  - type: web
+    name: staysafeos-app
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: apps/app
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_BASE_URL
+        value: https://app.staysafeos.com
+      - key: LOGTO_ENDPOINT
+        sync: false
+      - key: LOGTO_APP_ID
+        sync: false
+      - key: LOGTO_APP_SECRET
+        sync: false
+      - key: LOGTO_COOKIE_SECRET
+        generateValue: true
+      - key: LOGTO_API_RESOURCE
+        sync: false
+      - key: API_URL
+        value: https://api.staysafeos.com
+
+# =====================================
+# Databases
+# =====================================
+databases:
+  - name: staysafeos-db
+    plan: starter
+    region: oregon
+    databaseName: staysafeos
+    user: staysafeos
+
+# =====================================
+# Notes
+# =====================================
+#
+# Logto Auth Server:
+# Logto should be deployed separately using their Docker image or Logto Cloud.
+# See: https://docs.logto.io/docs/recipes/deployment/
+#
+# Required manual configuration after deployment:
+# 1. Deploy Logto OSS or use Logto Cloud
+# 2. Create applications in Logto Console:
+#    - Web app for Home (callback: https://home.staysafeos.com/callback)
+#    - Web app for App (callback: https://app.staysafeos.com/callback)
+# 3. Set LOGTO_* env vars in Render dashboard
+# 4. Create API resource for backend (https://api.staysafeos.com)
+# 5. Configure organizations for multi-tenancy

@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// Core Identity Models
+// ========================================
+
+model Account {
+  id          String   @id @default(cuid())
+  logtoUserId String   @unique @map("logto_user_id")
+  email       String   @unique
+  firstName   String?  @map("first_name")
+  lastName    String?  @map("last_name")
+  phone       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  memberships Membership[]
+  ownedOrgs   Organization[] @relation("OrgOwner")
+
+  @@map("accounts")
+}
+
+model Organization {
+  id                 String   @id @default(cuid())
+  logtoOrgId         String   @unique @map("logto_org_id")
+  slug               String   @unique
+  name               String
+  ownerAccountId     String?  @map("owner_account_id")
+  owner              Account? @relation("OrgOwner", fields: [ownerAccountId], references: [id])
+
+  // Branding/Theme
+  themeId            String?  @map("theme_id")
+  theme              Theme?   @relation(fields: [themeId], references: [id])
+
+  // Subscription
+  subscriptionTier   String   @default("free") @map("subscription_tier")
+  subscriptionStatus String?  @map("subscription_status")
+  stripeCustomerId   String?  @unique @map("stripe_customer_id")
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+
+  // Enterprise limits
+  enterpriseFleetSize     Int? @map("enterprise_fleet_size")
+  enterpriseRidesPerMonth Int? @map("enterprise_rides_per_month")
+  enterpriseOptions       Json? @map("enterprise_options")
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  memberships        Membership[]
+  domains            Domain[]
+  pages              Page[]
+  vans               Van[]
+  rides              Ride[]
+  settings           OrganizationSettings?
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  accountId      String       @map("account_id")
+  account        Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String       @default("RIDER")
+  status         String       @default("ACTIVE")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([accountId, organizationId])
+  @@map("memberships")
+}
+
+// ========================================
+// Branding & Content Models
+// ========================================
+
+model Theme {
+  id               String   @id @default(cuid())
+  primaryColor     String   @map("primary_color") // HSL format: "220 80% 50%"
+
+  // Auto-generated colors (can be overridden)
+  backgroundColor  String?  @map("background_color")
+  foregroundColor  String?  @map("foreground_color")
+  mutedColor       String?  @map("muted_color")
+  accentColor      String?  @map("accent_color")
+
+  // Brand assets
+  logoUrl          String?  @map("logo_url")
+  faviconUrl       String?  @map("favicon_url")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  organizations    Organization[]
+
+  @@map("themes")
+}
+
+model Domain {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  domain         String       @unique
+  isPrimary      Boolean      @default(false) @map("is_primary")
+  verifiedAt     DateTime?    @map("verified_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@map("domains")
+}
+
+model Page {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slug           String       // "home", "volunteer", "terms", etc.
+  title          String
+  blocks         Json         @default("[]") // Block editor content
+  published      Boolean      @default(false)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, slug])
+  @@map("pages")
+}
+
+// ========================================
+// Operations Models
+// ========================================
+
+model OrganizationSettings {
+  id                     String       @id @default(cuid())
+  organizationId         String       @unique @map("organization_id")
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  active                 Boolean      @default(true)
+  dispatcherEnabled      Boolean      @default(true) @map("dispatcher_enabled")
+  driverEnabled          Boolean      @default(true) @map("driver_enabled")
+  safetyEnabled          Boolean      @default(true) @map("safety_enabled")
+  roleDispatcherEnabled  Boolean      @default(false) @map("role_dispatcher_enabled")
+  rankRequired           Boolean      @default(false) @map("rank_required")
+  orgRequired            Boolean      @default(false) @map("org_required")
+  homeRequired           Boolean      @default(false) @map("home_required")
+  autoDisableEnabled     Boolean      @default(false) @map("auto_disable_enabled")
+  autoDisableTime        String?      @map("auto_disable_time")
+  autoDisableTz          String?      @map("auto_disable_tz")
+  nightBriefVideoId      String?      @map("night_brief_video_id")
+
+  @@map("organization_settings")
+}
+
+model Van {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  capacity       Int          @default(6)
+  licensePlate   String?      @map("license_plate")
+  status         String       @default("AVAILABLE") // AVAILABLE, IN_USE, MAINTENANCE
+  currentLat     Float?       @map("current_lat")
+  currentLng     Float?       @map("current_lng")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  rides          Ride[]
+
+  @@map("vans")
+}
+
+model Ride {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Rider info
+  riderName      String       @map("rider_name")
+  riderPhone     String       @map("rider_phone")
+  passengerCount Int          @default(1) @map("passenger_count")
+
+  // Locations
+  pickupAddress  String       @map("pickup_address")
+  pickupLat      Float?       @map("pickup_lat")
+  pickupLng      Float?       @map("pickup_lng")
+  dropoffAddress String       @map("dropoff_address")
+  dropoffLat     Float?       @map("dropoff_lat")
+  dropoffLng     Float?       @map("dropoff_lng")
+
+  // Status tracking
+  status         String       @default("PENDING") // PENDING, ASSIGNED, EN_ROUTE, PICKED_UP, COMPLETED, CANCELLED
+  priority       Int          @default(0)
+  notes          String?
+
+  // Assignment
+  vanId          String?      @map("van_id")
+  van            Van?         @relation(fields: [vanId], references: [id])
+  assignedAt     DateTime?    @map("assigned_at")
+  pickedUpAt     DateTime?    @map("picked_up_at")
+  completedAt    DateTime?    @map("completed_at")
+
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@map("rides")
+}
+
+// ========================================
+// Enums as reference
+// ========================================
+// Roles: RIDER, SAFETY, DRIVER, TC, DISPATCHER, EXECUTIVE, ADMIN
+// Subscription Tiers: free, starter, professional, enterprise
+// Ride Status: PENDING, ASSIGNED, EN_ROUTE, PICKED_UP, COMPLETED, CANCELLED
+// Van Status: AVAILABLE, IN_USE, MAINTENANCE
