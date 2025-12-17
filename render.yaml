@@ -3,6 +3,28 @@
 
 services:
   # =====================================
+  # Logto Auth Server (Self-Hosted)
+  # =====================================
+  - type: web
+    name: staysafeos-logto
+    runtime: image
+    image:
+      url: docker.io/svhd/logto:latest
+    region: oregon
+    plan: starter
+    envVars:
+      - key: TRUST_PROXY_HEADER
+        value: "1"
+      - key: DB_URL
+        fromDatabase:
+          name: staysafeos-db
+          property: connectionString
+      - key: ENDPOINT
+        value: https://auth.staysafeos.com
+      - key: ADMIN_ENDPOINT
+        value: https://auth.staysafeos.com/admin
+
+  # =====================================
   # Core API - NestJS
   # =====================================
   - type: web
@@ -102,15 +124,19 @@ databases:
 # Notes
 # =====================================
 #
-# Logto Auth Server:
-# Logto should be deployed separately using their Docker image or Logto Cloud.
-# See: https://docs.logto.io/docs/recipes/deployment/
+# Self-Hosted Logto Setup:
+# 1. Deploy this blueprint - Logto will initialize its tables in staysafeos-db
+# 2. Add custom domain: auth.staysafeos.com -> staysafeos-logto
+# 3. Access Logto Admin Console at https://auth.staysafeos.com/admin
+# 4. Create applications in Logto Console:
+#    - Web app "StaySafeOS Home" (callback: https://home.staysafeos.com/callback)
+#    - Web app "StaySafeOS App" (callback: https://app.staysafeos.com/callback)
+# 5. Create API resource: https://api.staysafeos.com
+# 6. Enable Organizations feature for multi-tenancy
+# 7. Set LOGTO_* env vars in Render dashboard for each app
 #
-# Required manual configuration after deployment:
-# 1. Deploy Logto OSS or use Logto Cloud
-# 2. Create applications in Logto Console:
-#    - Web app for Home (callback: https://home.staysafeos.com/callback)
-#    - Web app for App (callback: https://app.staysafeos.com/callback)
-# 3. Set LOGTO_* env vars in Render dashboard
-# 4. Create API resource for backend (https://api.staysafeos.com)
-# 5. Configure organizations for multi-tenancy
+# Custom Domains (Render Dashboard):
+# - auth.staysafeos.com -> staysafeos-logto
+# - api.staysafeos.com -> staysafeos-api
+# - home.staysafeos.com -> staysafeos-home
+# - app.staysafeos.com -> staysafeos-app
