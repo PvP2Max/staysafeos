@@ -8,14 +8,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     },
     "./tailwind": {
+      "types": "./dist/tailwind-preset.d.ts",
       "import": "./dist/tailwind-preset.mjs",
-      "require": "./dist/tailwind-preset.js",
-      "types": "./dist/tailwind-preset.d.ts"
+      "require": "./dist/tailwind-preset.js"
     }
   },
   "files": [
