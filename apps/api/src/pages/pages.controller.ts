@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PagesService } from "./pages.service";
 import { LogtoAuthGuard, Public, Roles } from "../auth/logto-auth.guard";
 import { RequestContextService } from "../common/context/request-context.service";
@@ -36,7 +37,7 @@ export class PagesController {
   @Roles("EXECUTIVE", "ADMIN")
   async createPage(
     @Param("orgId") orgId: string,
-    @Body() data: { slug: string; title: string; blocks?: unknown[] }
+    @Body() data: { slug: string; title: string; blocks?: Prisma.InputJsonValue }
   ) {
     return this.pagesService.createPage({
       organizationId: orgId,
@@ -50,7 +51,7 @@ export class PagesController {
   async updatePage(
     @Param("orgId") orgId: string,
     @Param("slug") slug: string,
-    @Body() data: { title?: string; blocks?: unknown[]; published?: boolean }
+    @Body() data: { title?: string; blocks?: Prisma.InputJsonValue; published?: boolean }
   ) {
     return this.pagesService.updatePage(orgId, slug, data);
   }
