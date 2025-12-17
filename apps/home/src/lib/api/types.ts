@@ -219,6 +219,16 @@ export interface SupportCode {
   updatedAt: string;
 }
 
+// Partner (public tenant listing)
+export interface Partner {
+  id: string;
+  slug: string;
+  name: string;
+  theme?: {
+    logoUrl?: string;
+  };
+}
+
 // API Response wrappers
 export interface PaginatedResponse<T> {
   data: T[];

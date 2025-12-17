@@ -37,6 +37,20 @@ export class AccountsService {
   }
 
   /**
+   * Get membership status for current tenant
+   * Used by frontend to redirect users without membership
+   */
+  async getMembershipStatus() {
+    const store = this.requestContext.store;
+    return {
+      hasAccount: !!store?.accountId,
+      hasMembership: !!store?.membership,
+      tenantSlug: store?.tenantSlug || null,
+      role: store?.membership?.role || null,
+    };
+  }
+
+  /**
    * Update current user's profile
    */
   async updateProfile(data: {

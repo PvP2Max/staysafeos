@@ -33,6 +33,14 @@ export class AccountsController {
     return this.accountsService.getMe();
   }
 
+  /**
+   * Quick endpoint to check if user has membership for current tenant
+   */
+  @Get("membership-status")
+  async getMembershipStatus() {
+    return this.accountsService.getMembershipStatus();
+  }
+
   @Put()
   async updateProfile(@Body() dto: UpdateProfileDto) {
     return this.accountsService.updateProfile(dto);

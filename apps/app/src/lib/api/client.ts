@@ -288,6 +288,16 @@ export class ApiClient {
   async getAvailableVolunteers(): Promise<Membership[]> {
     return this.fetch("/v1/driver/available");
   }
+
+  // Membership status check
+  async getMembershipStatus() {
+    return this.fetch<{
+      hasAccount: boolean;
+      hasMembership: boolean;
+      tenantSlug: string | null;
+      role: string | null;
+    }>("/v1/me/membership-status");
+  }
 }
 
 /**

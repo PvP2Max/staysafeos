@@ -5,9 +5,37 @@
 
 import { getLogtoContext } from "@logto/next/server-actions";
 import { logtoConfig } from "@/lib/logto";
-import type { ApiError } from "./types";
+import type { ApiError, Partner } from "./types";
 
 const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
+
+/**
+ * Public API functions (no auth required)
+ */
+export async function fetchPartners(search?: string): Promise<Partner[]> {
+  const params = search ? `?search=${encodeURIComponent(search)}` : "";
+  const response = await fetch(`${API_BASE_URL}/v1/tenants${params}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch partners");
+  }
+
+  return response.json();
+}
+
+export async function checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string }> {
+  const response = await fetch(`${API_BASE_URL}/v1/tenants/check-slug/${encodeURIComponent(slug)}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to check slug");
+  }
+
+  return response.json();
+}
 
 export class ApiClient {
   private accessToken?: string;
@@ -232,6 +260,27 @@ export class ApiClient {
     return this.fetch(`/v1/vans/${id}`, {
       method: "DELETE",
     });
+  }
+
+  // Tenant creation
+  async createTenant(data: { name: string; slug: string }) {
+    return this.fetch<{
+      id: string;
+      name: string;
+      slug: string;
+    }>("/v1/tenants", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Get user's organizations
+  async getMyOrganizations() {
+    return this.fetch<{
+      account: { id: string; email: string };
+      membership?: { id: string; role: string; tenantId: string };
+      ownedTenants: Array<{ id: string; slug: string; name: string; subscriptionTier: string }>;
+    }>("/v1/me");
   }
 }
 

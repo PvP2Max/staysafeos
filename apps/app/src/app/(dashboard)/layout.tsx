@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { logtoConfig } from "@/lib/logto";
 import { Button } from "@staysafeos/ui";
 import Link from "next/link";
+import { createApiClient } from "@/lib/api/client";
 
 export default async function DashboardLayout({
   children,
@@ -15,8 +16,25 @@ export default async function DashboardLayout({
     redirect("/");
   }
 
-  // TODO: Fetch actual role from membership
-  const role = "DISPATCHER" as string; // Placeholder - will be fetched from API
+  // Check membership status
+  let role = "RIDER" as string;
+  try {
+    const api = await createApiClient();
+    const status = await api.getMembershipStatus();
+
+    // Redirect if user has account but no membership for this tenant
+    if (status.hasAccount && !status.hasMembership) {
+      redirect("/no-membership");
+    }
+
+    // Use the role from membership status
+    if (status.role) {
+      role = status.role;
+    }
+  } catch {
+    // If API call fails, continue with default role
+    // This handles cases where the user might not have an account yet
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
