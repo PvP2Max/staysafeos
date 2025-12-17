@@ -7,9 +7,9 @@ services:
   # =====================================
   - type: web
     name: staysafeos-logto
-    runtime: image
-    image:
-      url: docker.io/svhd/logto:latest
+    runtime: docker
+    dockerfilePath: ./infra/logto/Dockerfile
+    dockerContext: ./infra/logto
     region: oregon
     plan: starter
     envVars:
@@ -32,9 +32,8 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    rootDir: apps/api
-    buildCommand: npm ci && npm run build
-    startCommand: npm run start:prod
+    buildCommand: npm ci && npm run build -w @staysafeos/api
+    startCommand: npm run start:prod -w @staysafeos/api
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_ENV
@@ -60,9 +59,8 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    rootDir: apps/home
-    buildCommand: npm ci && npm run build
-    startCommand: npm run start
+    buildCommand: npm ci && npm run build -w @staysafeos/home
+    startCommand: npm run start -w @staysafeos/home
     envVars:
       - key: NODE_ENV
         value: production
@@ -89,9 +87,8 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    rootDir: apps/app
-    buildCommand: npm ci && npm run build
-    startCommand: npm run start
+    buildCommand: npm ci && npm run build -w @staysafeos/app
+    startCommand: npm run start -w @staysafeos/app
     envVars:
       - key: NODE_ENV
         value: production
