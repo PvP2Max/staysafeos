@@ -32,8 +32,8 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    buildCommand: npm ci && npm run build -w @staysafeos/api
-    startCommand: npm run start:prod -w @staysafeos/api
+    buildCommand: npm ci --include=dev && npm run build -w @staysafeos/api
+    startCommand: node apps/api/dist/main
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_ENV
@@ -59,7 +59,7 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    buildCommand: npm ci && npm run build -w @staysafeos/home
+    buildCommand: npm ci --include=dev && npm run build -w @staysafeos/theme && npm run build -w @staysafeos/ui && npm run build -w @staysafeos/home
     startCommand: npm run start -w @staysafeos/home
     envVars:
       - key: NODE_ENV
@@ -87,7 +87,7 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    buildCommand: npm ci && npm run build -w @staysafeos/app
+    buildCommand: npm ci --include=dev && npm run build -w @staysafeos/theme && npm run build -w @staysafeos/ui && npm run build -w @staysafeos/app
     startCommand: npm run start -w @staysafeos/app
     envVars:
       - key: NODE_ENV
