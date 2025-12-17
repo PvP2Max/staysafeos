@@ -1,13 +1,19 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-echo "Checking if database needs seeding..."
+echo "=== StaySafeOS Logto Init ==="
+echo "Checking if database needs initialization..."
 
-# Try to seed the database (will fail gracefully if already seeded)
-npx @logto/cli db seed --swe || echo "Database already seeded or seed failed, continuing..."
+cd /etc/logto
 
-# Run alterations to ensure schema is up to date
-npx @logto/cli db alteration deploy || echo "Alterations already deployed, continuing..."
+# Use the bundled CLI to seed the database
+# --swe flag skips if already seeded
+echo "Running database seed..."
+npm run cli db seed -- --swe 2>&1 || echo "Seed completed or already exists"
 
-echo "Starting Logto..."
+# Deploy any pending alterations
+echo "Running database alterations..."
+npm run cli db alteration deploy 2>&1 || echo "Alterations completed or already deployed"
+
+echo "=== Starting Logto Server ==="
 exec npm start

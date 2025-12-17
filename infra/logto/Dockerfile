@@ -1,7 +1,8 @@
 FROM svhd/logto:latest
 
-# Entrypoint script that seeds DB on first run, then starts the app
+# Copy and setup entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
+# Override the default entrypoint to run our init script
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]
