@@ -115,7 +115,7 @@ services:
 # =====================================
 databases:
   - name: staysafeos-db
-    plan: starter
+    plan: basic
     region: oregon
     databaseName: staysafeos
     user: staysafeos
