@@ -1,8 +1,11 @@
-FROM svhd/logto:latest
+FROM ghcr.io/logto-io/logto:latest
 
-# Copy and setup entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Cache bust - change this value to force rebuild
+ARG CACHE_BUST=v2
 
-# Override the default entrypoint to run our init script
-ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]
+# Copy init script
+COPY init.sh /init.sh
+RUN chmod +x /init.sh
+
+# Use our init script as entrypoint
+ENTRYPOINT ["/init.sh"]

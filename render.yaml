@@ -7,12 +7,11 @@ services:
   # =====================================
   - type: web
     name: staysafeos-logto
-    runtime: image
-    image:
-      url: ghcr.io/logto-io/logto:latest
+    runtime: docker
+    dockerfilePath: ./infra/logto/Dockerfile
+    dockerContext: ./infra/logto
     region: oregon
     plan: starter
-    dockerCommand: sh -c 'cd /etc/logto && npm run cli db seed -- --swe && npm run cli db alteration deploy && npm start'
     envVars:
       - key: TRUST_PROXY_HEADER
         value: "1"
