@@ -27,7 +27,7 @@ services:
       - key: LOGTO_AUDIENCE
         sync: false
       - key: CORS_ORIGINS
-        value: https://staysafeos.com,https://home.staysafeos.com,https://app.staysafeos.com
+        value: https://staysafeos.com,https://*.staysafeos.com
 
   # =====================================
   # Home - Marketing & Control Plane
@@ -43,7 +43,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_BASE_URL
-        value: https://home.staysafeos.com
+        value: https://staysafeos.com
       - key: LOGTO_ENDPOINT
         sync: false
       - key: LOGTO_APP_ID
@@ -58,7 +58,8 @@ services:
         value: https://api.staysafeos.com
 
   # =====================================
-  # App - Operations Dashboard
+  # App - Operations Dashboard (Wildcard Subdomains)
+  # Handles: wainwright.staysafeos.com, otherorg.staysafeos.com, etc.
   # =====================================
   - type: web
     name: staysafeos-app
@@ -99,13 +100,22 @@ databases:
 # Notes
 # =====================================
 #
-# Logto is hosted on DigitalOcean Droplet at auth.staysafeos.com
+# Logto is hosted on DigitalOcean Droplet
+# - auth.staysafeos.com (sign-in)
+# - admin-auth.staysafeos.com (admin console)
 # See infra/logto/README.md for setup instructions
 #
 # Custom Domains (Render Dashboard):
+# - staysafeos.com -> staysafeos-home (root domain)
 # - api.staysafeos.com -> staysafeos-api
-# - home.staysafeos.com -> staysafeos-home
-# - app.staysafeos.com -> staysafeos-app
+# - *.staysafeos.com -> staysafeos-app (wildcard for tenants)
+#
+# DNS Setup:
+# - staysafeos.com A -> Render IP (or CNAME to staysafeos-home.onrender.com)
+# - api.staysafeos.com CNAME -> staysafeos-api.onrender.com
+# - *.staysafeos.com CNAME -> staysafeos-app.onrender.com
+# - auth.staysafeos.com A -> DigitalOcean Droplet IP
+# - admin-auth.staysafeos.com A -> DigitalOcean Droplet IP
 #
 # Environment Variables to set manually:
 # - LOGTO_ENDPOINT: https://auth.staysafeos.com

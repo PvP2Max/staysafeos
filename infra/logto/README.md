@@ -23,6 +23,7 @@ This guide sets up Logto on a $6/month DigitalOcean Droplet with Docker.
 ## Step 2: Point DNS
 
 Add an A record in your DNS provider:
+
 ```
 auth.staysafeos.com  A  <DROPLET_IP>
 ```
@@ -43,7 +44,7 @@ nano docker-compose.yml
 Paste this content:
 
 ```yaml
-version: '3.9'
+version: "3.9"
 
 services:
   logto-db:
@@ -75,9 +76,14 @@ services:
       ENDPOINT: https://auth.staysafeos.com
       ADMIN_ENDPOINT: https://auth.staysafeos.com
     ports:
-      - "3001:3001"  # Core
-      - "3002:3002"  # Admin
-    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm run cli db alteration deploy && npm start"]
+      - "3001:3001" # Core
+      - "3002:3002" # Admin
+    entrypoint:
+      [
+        "sh",
+        "-c",
+        "npm run cli db seed -- --swe && npm run cli db alteration deploy && npm start",
+      ]
 
   caddy:
     image: caddy:2-alpine
@@ -106,6 +112,16 @@ volumes:
 ```bash
 nano Caddyfile
 ```
+
+cat > Caddyfile << 'EOF'
+auth.staysafeos.com {
+reverse_proxy logto:3001
+}
+
+admin-auth.staysafeos.com {
+reverse_proxy logto:3002
+}
+EOF
 
 Paste:
 
@@ -137,6 +153,7 @@ docker compose up -d
 ```
 
 Check logs:
+
 ```bash
 docker compose logs -f logto
 ```
@@ -161,34 +178,40 @@ Go to: `https://auth.staysafeos.com/console`
 ## Step 8: Update Render Environment Variables
 
 In Render dashboard, set for **staysafeos-home** and **staysafeos-app**:
+
 - `LOGTO_ENDPOINT`: `https://auth.staysafeos.com`
 - `LOGTO_APP_ID`: (from Logto Console)
 - `LOGTO_APP_SECRET`: (from Logto Console)
 - `LOGTO_API_RESOURCE`: `https://api.staysafeos.com`
 
 For **staysafeos-api**:
+
 - `LOGTO_ENDPOINT`: `https://auth.staysafeos.com`
 - `LOGTO_AUDIENCE`: `https://api.staysafeos.com`
 
 ## Maintenance
 
 ### View Logs
+
 ```bash
 docker compose logs -f
 ```
 
 ### Update Logto
+
 ```bash
 docker compose pull logto
 docker compose up -d
 ```
 
 ### Backup Database
+
 ```bash
 docker exec logto-db pg_dump -U logto logto > backup-$(date +%Y%m%d).sql
 ```
 
 ### Restore Database
+
 ```bash
 cat backup.sql | docker exec -i logto-db psql -U logto logto
 ```
@@ -196,16 +219,19 @@ cat backup.sql | docker exec -i logto-db psql -U logto logto
 ## Troubleshooting
 
 ### Check if services are running
+
 ```bash
 docker compose ps
 ```
 
 ### Restart services
+
 ```bash
 docker compose restart
 ```
 
 ### View specific service logs
+
 ```bash
 docker compose logs -f logto
 docker compose logs -f caddy
@@ -213,7 +239,9 @@ docker compose logs -f logto-db
 ```
 
 ### SSL Certificate Issues
+
 Caddy handles SSL automatically. If issues occur:
+
 ```bash
 docker compose restart caddy
 ```
