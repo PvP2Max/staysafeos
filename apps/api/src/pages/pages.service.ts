@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 
@@ -28,7 +29,7 @@ export class PagesService {
     organizationId: string;
     slug: string;
     title: string;
-    blocks?: unknown[];
+    blocks?: Prisma.InputJsonValue;
   }) {
     return this.prisma.page.create({
       data: {
@@ -43,7 +44,7 @@ export class PagesService {
   async updatePage(
     organizationId: string,
     slug: string,
-    data: { title?: string; blocks?: unknown[]; published?: boolean }
+    data: { title?: string; blocks?: Prisma.InputJsonValue; published?: boolean }
   ) {
     return this.prisma.page.update({
       where: {
