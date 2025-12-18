@@ -1,23 +1,45 @@
-import { createApiClient } from "@/lib/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge } from "@staysafeos/ui";
 import Link from "next/link";
 import { CreateOrgDialog } from "./create-org-dialog";
+import { headers } from "next/headers";
 
 export const metadata = {
   title: "Organizations | StaySafeOS",
   description: "Manage your organizations",
 };
 
+async function fetchMyOrganizations() {
+  // Get the host from headers for internal API call
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+
+  // Forward cookies for authentication
+  const cookie = headersList.get("cookie") || "";
+
+  const response = await fetch(`${protocol}://${host}/api/me`, {
+    headers: { cookie },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return response.json();
+}
+
 export default async function OrganizationsPage() {
   let ownedOrgs: Array<{ id: string; slug: string; name: string; subscriptionTier: string }> = [];
   let currentMembership: { id: string; role: string; tenantId: string } | undefined;
 
   try {
-    const api = await createApiClient();
-    const me = await api.getMyOrganizations();
-    console.log("[organizations] API response:", JSON.stringify(me, null, 2));
-    ownedOrgs = me.ownedTenants || [];
-    currentMembership = me.membership;
+    const me = await fetchMyOrganizations();
+    if (me) {
+      console.log("[organizations] API response:", JSON.stringify(me, null, 2));
+      ownedOrgs = me.ownedTenants || [];
+      currentMembership = me.membership;
+    }
   } catch (error) {
     console.error("[organizations] Error fetching organizations:", error);
     // User may not have API access yet - show empty state
