@@ -1,4 +1,5 @@
 import { LogtoNextConfig } from "@logto/next";
+import { getAccessToken } from "@logto/next/server-actions";
 
 /**
  * Creates Logto config at runtime to ensure env vars are read
@@ -7,11 +8,6 @@ import { LogtoNextConfig } from "@logto/next";
  * available at runtime but not during the build step.
  */
 export function getLogtoConfig(): LogtoNextConfig {
-  // Debug: log env vars at runtime
-  console.log("[logto] Building config at runtime");
-  console.log("[logto] LOGTO_API_RESOURCE env:", process.env.LOGTO_API_RESOURCE || "NOT SET");
-  console.log("[logto] LOGTO_ENDPOINT env:", process.env.LOGTO_ENDPOINT ? "set" : "NOT SET");
-
   const config: LogtoNextConfig = {
     endpoint: process.env.LOGTO_ENDPOINT || "https://placeholder.logto.app",
     appId: process.env.LOGTO_APP_ID || "placeholder",
@@ -25,8 +21,28 @@ export function getLogtoConfig(): LogtoNextConfig {
       : undefined,
   };
 
-  console.log("[logto] Config resources:", config.resources);
   return config;
+}
+
+/**
+ * Get an access token for the API resource.
+ * Returns undefined if no API resource is configured or token fetch fails.
+ */
+export async function getApiAccessToken(): Promise<string | undefined> {
+  const apiResource = process.env.LOGTO_API_RESOURCE;
+  if (!apiResource) {
+    console.warn("[logto] LOGTO_API_RESOURCE not configured");
+    return undefined;
+  }
+
+  try {
+    const config = getLogtoConfig();
+    const token = await getAccessToken(config, apiResource);
+    return token;
+  } catch (error) {
+    console.error("[logto] Failed to get API access token:", error);
+    return undefined;
+  }
 }
 
 // Backwards compatible export - creates fresh config on every property access

@@ -1,6 +1,6 @@
 import { getLogtoContext } from "@logto/next/server-actions";
 import { NextRequest, NextResponse } from "next/server";
-import { getLogtoConfig } from "@/lib/logto";
+import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 
 // Force runtime evaluation - env vars not available at build time on Render
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ function getApiBaseUrl() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { isAuthenticated, accessToken } = await getLogtoContext(getLogtoConfig());
+    const { isAuthenticated } = await getLogtoContext(getLogtoConfig());
 
     if (!isAuthenticated) {
       return NextResponse.json(
@@ -22,6 +22,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Get access token for the API resource
+    const accessToken = await getApiAccessToken();
 
     if (!accessToken) {
       // If no access token, we can't update the API

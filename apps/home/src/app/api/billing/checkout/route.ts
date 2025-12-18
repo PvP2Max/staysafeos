@@ -1,6 +1,6 @@
 import { getLogtoContext } from "@logto/next/server-actions";
 import { NextRequest, NextResponse } from "next/server";
-import { getLogtoConfig } from "@/lib/logto";
+import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 import { stripe, PRICE_IDS } from "@/lib/stripe";
 
 // Force runtime evaluation - env vars not available at build time on Render
@@ -10,13 +10,10 @@ export const dynamic = "force-dynamic";
 function getApiBaseUrl() {
   return process.env.API_URL || "https://api.staysafeos.com";
 }
-function getBaseUrl() {
-  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const { isAuthenticated, accessToken, claims } = await getLogtoContext(getLogtoConfig());
+    const { isAuthenticated, claims } = await getLogtoContext(getLogtoConfig());
 
     if (!isAuthenticated) {
       return NextResponse.json(
@@ -41,6 +38,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Get access token for the API resource
+    const accessToken = await getApiAccessToken();
 
     // Get organization details from API to check for existing Stripe customer
     let stripeCustomerId: string | null = null;
