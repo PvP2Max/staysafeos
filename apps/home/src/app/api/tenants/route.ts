@@ -6,12 +6,22 @@ const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
 
 export async function POST(request: NextRequest) {
   try {
-    const { isAuthenticated, accessToken } = await getLogtoContext(logtoConfig);
+    const { isAuthenticated, accessToken, claims } = await getLogtoContext(logtoConfig);
 
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       return NextResponse.json(
-        { message: "Authentication required" },
+        { message: "Please sign in to create an organization" },
         { status: 401 }
+      );
+    }
+
+    // If no access token but authenticated, we need to use ID token claims
+    // This happens when LOGTO_API_RESOURCE isn't configured
+    if (!accessToken) {
+      console.warn("[api/tenants] No access token available - LOGTO_API_RESOURCE may not be configured");
+      return NextResponse.json(
+        { message: "API access not configured. Please contact support." },
+        { status: 503 }
       );
     }
 

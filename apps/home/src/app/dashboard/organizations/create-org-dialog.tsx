@@ -13,7 +13,6 @@ import {
   Input,
   Label,
 } from "@staysafeos/ui";
-import { checkSlugAvailability } from "@/lib/api/client";
 
 interface CreateOrgDialogProps {
   children?: React.ReactNode;
@@ -63,8 +62,13 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
     const timer = setTimeout(async () => {
       setSlugChecking(true);
       try {
-        const result = await checkSlugAvailability(slug);
-        setSlugAvailable(result.available);
+        const response = await fetch(`/api/tenants/check-slug?slug=${encodeURIComponent(slug)}`);
+        if (response.ok) {
+          const result = await response.json();
+          setSlugAvailable(result.available);
+        } else {
+          setSlugAvailable(null);
+        }
       } catch {
         setSlugAvailable(null);
       } finally {
@@ -137,7 +141,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
               <Label htmlFor="org-name">Organization Name</Label>
               <Input
                 id="org-name"
-                placeholder="My SADD Chapter"
+                placeholder="My Safe Rides Program"
                 value={name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
                 disabled={isPending}
@@ -160,7 +164,7 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
               <div className="flex items-center gap-1">
                 <Input
                   id="org-slug"
-                  placeholder="my-sadd"
+                  placeholder="my-org"
                   value={slug}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setSlugTouched(true);
