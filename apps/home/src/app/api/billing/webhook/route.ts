@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe, stripe } from "@/lib/stripe";
 import Stripe from "stripe";
 
+// Force runtime evaluation - env vars not available at build time on Render
+export const dynamic = "force-dynamic";
+
 const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
 

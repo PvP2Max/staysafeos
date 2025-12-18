@@ -2,6 +2,9 @@ import { signOut } from "@logto/next/server-actions";
 import { logtoConfig } from "@/lib/logto";
 import { NextResponse } from "next/server";
 
+// Force runtime evaluation - env vars not available at build time on Render
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     await signOut(logtoConfig);

@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
 import { logtoConfig } from "@/lib/logto";
 
+// Force runtime evaluation - env vars not available at build time on Render
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 

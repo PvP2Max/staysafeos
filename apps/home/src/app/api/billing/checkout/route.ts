@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { logtoConfig } from "@/lib/logto";
 import { stripe, PRICE_IDS } from "@/lib/stripe";
 
+// Force runtime evaluation - env vars not available at build time on Render
+export const dynamic = "force-dynamic";
+
 const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
 
 export async function POST(request: NextRequest) {

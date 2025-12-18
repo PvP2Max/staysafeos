@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Force runtime evaluation - env vars not available at build time on Render
+export const dynamic = "force-dynamic";
+
 const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
 
 export async function GET(request: NextRequest) {
