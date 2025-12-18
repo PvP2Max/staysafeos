@@ -4,7 +4,7 @@
  */
 
 import { getLogtoContext } from "@logto/next/server-actions";
-import { logtoConfig } from "@/lib/logto";
+import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 import type { ApiError, Partner } from "./types";
 
 const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
@@ -288,10 +288,17 @@ export class ApiClient {
  * Create an authenticated API client from the current Logto session
  */
 export async function createApiClient(): Promise<ApiClient> {
-  const { isAuthenticated, accessToken, claims } = await getLogtoContext(logtoConfig);
+  const config = getLogtoConfig();
+  const { isAuthenticated, claims } = await getLogtoContext(config);
 
-  if (!isAuthenticated || !accessToken) {
+  if (!isAuthenticated) {
     throw new Error("Not authenticated");
+  }
+
+  // Get API resource access token (not identity token)
+  const accessToken = await getApiAccessToken();
+  if (!accessToken) {
+    throw new Error("Could not get API access token");
   }
 
   // Get tenant ID from organization claims or context
