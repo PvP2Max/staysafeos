@@ -60,7 +60,14 @@ export class TenantsService {
 
     // Create organization with owner membership in a transaction
     return this.prisma.$transaction(async (tx) => {
-      // Create the organization
+      // Create default theme first
+      const theme = await tx.theme.create({
+        data: {
+          primaryColor: "220 80% 50%", // HSL format
+        },
+      });
+
+      // Create the organization with the theme
       const org = await tx.organization.create({
         data: {
           name: dto.name,
@@ -68,6 +75,7 @@ export class TenantsService {
           logtoOrgId: `org_${dto.slug}`, // Placeholder - should sync with Logto
           ownerAccountId: ownerAccountId,
           subscriptionTier: "free",
+          themeId: theme.id,
         },
       });
 
@@ -78,15 +86,6 @@ export class TenantsService {
           organizationId: org.id,
           role: "EXECUTIVE",
           status: "ACTIVE",
-        },
-      });
-
-      // Create default theme
-      await tx.theme.create({
-        data: {
-          organizationId: org.id,
-          primaryColor: "#3b82f6",
-          secondaryColor: "#1e40af",
         },
       });
 

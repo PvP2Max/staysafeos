@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "StaySafeOS - Drunk Driving Prevention Platform",
+  title: "StaySafeOS",
   description:
-    "Multi-tenant SaaS platform for SADD (Soldiers Against Drunk Driving) programs. Manage ride requests, dispatch vans, and coordinate volunteers.",
+    "The all-in-one platform for drunk driving prevention programs. Real-time dispatch, volunteer coordination, and white-label branding for universities, communities, and organizations.",
   metadataBase: new URL("https://staysafeos.com"),
 };
 

@@ -2,7 +2,6 @@ import { getLogtoContext } from "@logto/next/server-actions";
 import { logtoConfig } from "@/lib/logto";
 import { createApiClient } from "@/lib/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@staysafeos/ui";
-import Link from "next/link";
 
 export default async function DashboardPage() {
   const { claims } = await getLogtoContext(logtoConfig);
@@ -39,30 +38,6 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <QuickActionCard
-          href="/dashboard/branding"
-          title="Customize Branding"
-          description="Update your logo, colors, and favicon"
-        />
-        <QuickActionCard
-          href="/dashboard/pages"
-          title="Edit Pages"
-          description="Customize your home page and content"
-        />
-        <QuickActionCard
-          href="/dashboard/settings"
-          title="Settings"
-          description="Manage feature toggles and preferences"
-        />
-        <QuickActionCard
-          href="/dashboard/members"
-          title="Team Members"
-          description="Manage users and their roles"
-        />
-      </div>
-
       {/* Stats Overview */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Overview</h2>
@@ -74,27 +49,6 @@ export default async function DashboardPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function QuickActionCard({
-  href,
-  title,
-  description,
-}: {
-  href: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link href={href}>
-      <Card className="hover:border-primary transition-colors cursor-pointer h-full">
-        <CardHeader>
-          <CardTitle className="text-lg">{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-      </Card>
-    </Link>
   );
 }
 

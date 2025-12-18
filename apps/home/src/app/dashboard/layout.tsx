@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { logtoConfig } from "@/lib/logto";
 import { Button } from "@staysafeos/ui";
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 
 export default async function DashboardLayout({
   children,
@@ -21,8 +22,8 @@ export default async function DashboardLayout({
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-xl font-bold text-primary">
-              StaySafeOS
+            <Link href="/dashboard">
+              <Logo size="md" />
             </Link>
             <nav className="hidden md:flex items-center gap-4 text-sm">
               <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
