@@ -216,7 +216,7 @@ export default function HomePage() {
                 </Button>
               </Link>
               <Link href="/partners">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 bg-transparent border-white/30 text-white hover:bg-white/10">
                   Browse Partners
                 </Button>
               </Link>
@@ -248,8 +248,8 @@ export default function HomePage() {
             <div>
               <h4 className="font-semibold mb-3">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/login" className="hover:text-foreground">Documentation</Link></li>
-                <li><Link href="/login" className="hover:text-foreground">Support</Link></li>
+                <li><Link href="/docs" className="hover:text-foreground">Documentation</Link></li>
+                <li><Link href="/support" className="hover:text-foreground">Support</Link></li>
               </ul>
             </div>
             <div>

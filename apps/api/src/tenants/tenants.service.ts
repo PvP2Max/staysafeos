@@ -135,4 +135,52 @@ export class TenantsService {
       },
     });
   }
+
+  /**
+   * Update Stripe customer ID
+   */
+  async updateStripeCustomer(id: string, stripeCustomerId: string) {
+    return this.prisma.organization.update({
+      where: { id },
+      data: { stripeCustomerId },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        stripeCustomerId: true,
+      },
+    });
+  }
+
+  /**
+   * Update subscription data (for webhook)
+   */
+  async updateSubscription(
+    id: string,
+    data: {
+      subscriptionTier?: string;
+      subscriptionStatus?: string;
+      stripeCustomerId?: string;
+      stripeSubscriptionId?: string | null;
+    }
+  ) {
+    return this.prisma.organization.update({
+      where: { id },
+      data: {
+        ...(data.subscriptionTier && { subscriptionTier: data.subscriptionTier }),
+        ...(data.subscriptionStatus && { subscriptionStatus: data.subscriptionStatus }),
+        ...(data.stripeCustomerId && { stripeCustomerId: data.stripeCustomerId }),
+        ...(data.stripeSubscriptionId !== undefined && { stripeSubscriptionId: data.stripeSubscriptionId }),
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        subscriptionTier: true,
+        subscriptionStatus: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+      },
+    });
+  }
 }

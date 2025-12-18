@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Body, BadRequestException } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Param, Query, Body, BadRequestException, Headers, UnauthorizedException } from "@nestjs/common";
 import { TenantsService } from "./tenants.service";
 import { LogtoAuthGuard, Public } from "../auth/logto-auth.guard";
 import { CreateTenantDto } from "./dto/create-tenant.dto";
@@ -49,5 +49,61 @@ export class TenantsController {
       throw new BadRequestException("Authentication required to create a tenant");
     }
     return this.tenantsService.create(dto, accountId);
+  }
+
+  /**
+   * Update Stripe customer ID for an organization
+   */
+  @Patch(":id/stripe-customer")
+  async updateStripeCustomer(
+    @Param("id") id: string,
+    @Body() body: { stripeCustomerId: string }
+  ) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    // Verify the user owns this organization
+    const org = await this.tenantsService.findById(id);
+    if (!org || org.ownerAccountId !== accountId) {
+      throw new UnauthorizedException("You don't have permission to update this organization");
+    }
+
+    return this.tenantsService.updateStripeCustomer(id, body.stripeCustomerId);
+  }
+}
+
+/**
+ * Internal controller for webhook updates (separate route prefix)
+ */
+@Controller("internal/organizations")
+export class InternalOrganizationsController {
+  constructor(private readonly tenantsService: TenantsService) {}
+
+  /**
+   * Update subscription data from Stripe webhook
+   * Protected by internal API key
+   */
+  @Patch(":id/subscription")
+  @Public()
+  async updateSubscription(
+    @Param("id") id: string,
+    @Headers("x-internal-key") internalKey: string,
+    @Body()
+    body: {
+      subscriptionTier?: string;
+      subscriptionStatus?: string;
+      stripeCustomerId?: string;
+      stripeSubscriptionId?: string | null;
+    }
+  ) {
+    // Verify internal API key
+    const expectedKey = process.env.INTERNAL_API_KEY;
+    if (!expectedKey || internalKey !== expectedKey) {
+      throw new UnauthorizedException("Invalid internal API key");
+    }
+
+    return this.tenantsService.updateSubscription(id, body);
   }
 }
