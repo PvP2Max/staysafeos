@@ -5,8 +5,13 @@ import Stripe from "stripe";
 // Force runtime evaluation - env vars not available at build time on Render
 export const dynamic = "force-dynamic";
 
-const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
+// Helpers to get env vars at request time
+function getApiBaseUrl() {
+  return process.env.API_URL || "https://api.staysafeos.com";
+}
+function getWebhookSecret() {
+  return process.env.STRIPE_WEBHOOK_SECRET!;
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -19,7 +24,7 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    event = getStripe().webhooks.constructEvent(body, signature, WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(body, signature, getWebhookSecret());
   } catch (err) {
     console.error("[webhook] Signature verification failed:", err);
     return NextResponse.json({ message: "Invalid signature" }, { status: 400 });
@@ -162,7 +167,7 @@ async function updateOrganizationSubscription(
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/v1/internal/organizations/${organizationId}/subscription`,
+      `${getApiBaseUrl()}/v1/internal/organizations/${organizationId}/subscription`,
       {
         method: "PATCH",
         headers: {

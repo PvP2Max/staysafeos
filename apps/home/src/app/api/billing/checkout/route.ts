@@ -6,7 +6,13 @@ import { stripe, PRICE_IDS } from "@/lib/stripe";
 // Force runtime evaluation - env vars not available at build time on Render
 export const dynamic = "force-dynamic";
 
-const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
+// Helper to get env vars at request time
+function getApiBaseUrl() {
+  return process.env.API_URL || "https://api.staysafeos.com";
+}
+function getBaseUrl() {
+  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (accessToken) {
       try {
-        const response = await fetch(`${API_BASE_URL}/v1/organizations/${organizationId}`, {
+        const response = await fetch(`${getApiBaseUrl()}/v1/organizations/${organizationId}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -75,7 +81,7 @@ export async function POST(request: NextRequest) {
       // Update organization with Stripe customer ID via API
       if (accessToken) {
         try {
-          await fetch(`${API_BASE_URL}/v1/organizations/${organizationId}/stripe-customer`, {
+          await fetch(`${getApiBaseUrl()}/v1/organizations/${organizationId}/stripe-customer`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",

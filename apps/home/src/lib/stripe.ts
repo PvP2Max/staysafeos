@@ -25,13 +25,18 @@ export const stripe = {
   get subscriptions() { return getStripe().subscriptions; },
 };
 
-// Price IDs for each plan (set these in your environment or Stripe dashboard)
-export const PRICE_IDS: Record<string, string> = {
-  starter: process.env.STRIPE_PRICE_STARTER || "",
-  growth: process.env.STRIPE_PRICE_GROWTH || "",
-  pro: process.env.STRIPE_PRICE_PRO || "",
-  enterprise: process.env.STRIPE_PRICE_ENTERPRISE || "",
-};
+// Price IDs for each plan - uses getter to read env vars at runtime
+export const PRICE_IDS: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get(_, planId: string) {
+    const priceMap: Record<string, string | undefined> = {
+      starter: process.env.STRIPE_PRICE_STARTER,
+      growth: process.env.STRIPE_PRICE_GROWTH,
+      pro: process.env.STRIPE_PRICE_PRO,
+      enterprise: process.env.STRIPE_PRICE_ENTERPRISE,
+    };
+    return priceMap[planId] || "";
+  },
+});
 
 // Plan limits for feature gating
 export const PLAN_LIMITS: Record<string, { vehicles: number; rides: number | null; features: string[] }> = {

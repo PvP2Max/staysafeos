@@ -5,7 +5,10 @@ import { logtoConfig } from "@/lib/logto";
 // Force runtime evaluation - env vars not available at build time on Render
 export const dynamic = "force-dynamic";
 
-const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
+// Helper to get API URL at request time
+function getApiBaseUrl() {
+  return process.env.API_URL || "https://api.staysafeos.com";
+}
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -27,7 +30,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Forward to API
-    const response = await fetch(`${API_BASE_URL}/v1/me`, {
+    const response = await fetch(`${getApiBaseUrl()}/v1/me`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

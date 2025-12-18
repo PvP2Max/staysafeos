@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 // Force runtime evaluation - env vars not available at build time on Render
 export const dynamic = "force-dynamic";
 
-const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
+// Helper to get API URL at request time, not module load time
+function getApiBaseUrl() {
+  return process.env.API_URL || "https://api.staysafeos.com";
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +21,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Forward to API (public endpoint, no auth required)
+    const apiUrl = getApiBaseUrl();
     const response = await fetch(
-      `${API_BASE_URL}/v1/tenants/check-slug/${encodeURIComponent(slug)}`,
+      `${apiUrl}/v1/tenants/check-slug/${encodeURIComponent(slug)}`,
       { cache: "no-store" }
     );
 
