@@ -12,7 +12,17 @@ function getApiBaseUrl() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { isAuthenticated, accessToken, claims } = await getLogtoContext(getLogtoConfig());
+    const config = getLogtoConfig();
+    const { isAuthenticated, accessToken, claims } = await getLogtoContext(config);
+
+    // Debug: log auth context details
+    console.log("[api/tenants] Auth context:", {
+      isAuthenticated,
+      hasAccessToken: !!accessToken,
+      accessTokenLength: accessToken?.length,
+      hasClaims: !!claims,
+      claimsSub: claims?.sub,
+    });
 
     if (!isAuthenticated) {
       return NextResponse.json(
@@ -24,7 +34,7 @@ export async function POST(request: NextRequest) {
     // If no access token but authenticated, we need to use ID token claims
     // This happens when LOGTO_API_RESOURCE isn't configured
     if (!accessToken) {
-      console.warn("[api/tenants] No access token available - LOGTO_API_RESOURCE may not be configured");
+      console.warn("[api/tenants] No access token available - check logs above for LOGTO_API_RESOURCE value");
       return NextResponse.json(
         { message: "API access not configured. Please contact support." },
         { status: 503 }

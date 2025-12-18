@@ -7,7 +7,12 @@ import { LogtoNextConfig } from "@logto/next";
  * available at runtime but not during the build step.
  */
 export function getLogtoConfig(): LogtoNextConfig {
-  return {
+  // Debug: log env vars at runtime
+  console.log("[logto] Building config at runtime");
+  console.log("[logto] LOGTO_API_RESOURCE env:", process.env.LOGTO_API_RESOURCE || "NOT SET");
+  console.log("[logto] LOGTO_ENDPOINT env:", process.env.LOGTO_ENDPOINT ? "set" : "NOT SET");
+
+  const config: LogtoNextConfig = {
     endpoint: process.env.LOGTO_ENDPOINT || "https://placeholder.logto.app",
     appId: process.env.LOGTO_APP_ID || "placeholder",
     appSecret: process.env.LOGTO_APP_SECRET || "placeholder",
@@ -19,6 +24,9 @@ export function getLogtoConfig(): LogtoNextConfig {
       ? [process.env.LOGTO_API_RESOURCE]
       : undefined,
   };
+
+  console.log("[logto] Config resources:", config.resources);
+  return config;
 }
 
 // Backwards compatible export - creates fresh config on every property access
