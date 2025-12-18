@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Patch, Param, Query, Body, BadRequestException, Headers, UnauthorizedException } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Param, Query, Body, BadRequestException, Headers, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { TenantsService } from "./tenants.service";
 import { LogtoAuthGuard, Public } from "../auth/logto-auth.guard";
 import { CreateTenantDto } from "./dto/create-tenant.dto";
 import { RequestContextService } from "../common/context/request-context.service";
 
 @Controller("tenants")
+@UseGuards(LogtoAuthGuard)
 export class TenantsController {
   constructor(
     private readonly tenantsService: TenantsService,
@@ -65,6 +66,63 @@ export class TenantsController {
     }
 
     // Verify the user owns this organization
+    const org = await this.tenantsService.findById(id);
+    if (!org || org.ownerAccountId !== accountId) {
+      throw new UnauthorizedException("You don't have permission to update this organization");
+    }
+
+    return this.tenantsService.updateStripeCustomer(id, body.stripeCustomerId);
+  }
+}
+
+/**
+ * Organizations controller - provides ID-based access for billing and internal operations
+ */
+@Controller("organizations")
+@UseGuards(LogtoAuthGuard)
+export class OrganizationsController {
+  constructor(
+    private readonly tenantsService: TenantsService,
+    private readonly requestContext: RequestContextService
+  ) {}
+
+  /**
+   * Get organization by ID - requires authentication and ownership/membership
+   */
+  @Get(":id")
+  async getOrganization(@Param("id") id: string) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    const org = await this.tenantsService.findById(id);
+    if (!org) {
+      throw new BadRequestException("Organization not found");
+    }
+
+    // Verify the user owns this organization or is a member
+    if (org.ownerAccountId !== accountId) {
+      // TODO: Add membership check when needed
+      throw new UnauthorizedException("You don't have access to this organization");
+    }
+
+    return org;
+  }
+
+  /**
+   * Update Stripe customer ID for an organization
+   */
+  @Patch(":id/stripe-customer")
+  async updateStripeCustomer(
+    @Param("id") id: string,
+    @Body() body: { stripeCustomerId: string }
+  ) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
     const org = await this.tenantsService.findById(id);
     if (!org || org.ownerAccountId !== accountId) {
       throw new UnauthorizedException("You don't have permission to update this organization");

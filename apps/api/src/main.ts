@@ -31,6 +31,7 @@ async function bootstrap() {
   app.enableCors({
     origin: process.env.CORS_ORIGINS?.split(",") ?? [
       "https://staysafeos.com",
+      "https://www.staysafeos.com",
       "https://home.staysafeos.com",
       "https://app.staysafeos.com",
     ],

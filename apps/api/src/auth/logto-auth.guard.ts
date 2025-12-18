@@ -86,16 +86,53 @@ export class LogtoAuthGuard implements CanActivate {
 
   /**
    * Load account and membership info into request context
+   * Auto-creates account if it doesn't exist (JIT provisioning)
    */
   private async loadAccountContext(payload: LogtoTokenPayload): Promise<void> {
-    // Find account by Logto user ID
-    const account = await this.prisma.account.findUnique({
+    // Find or create account by Logto user ID
+    let account = await this.prisma.account.findUnique({
       where: { logtoUserId: payload.sub },
     });
 
     if (!account) {
-      // Account not synced yet - this is handled by webhooks
-      return;
+      // Auto-provision account from Logto token claims (JIT provisioning)
+      if (!payload.email) {
+        console.warn(
+          `[auth] Cannot auto-provision account for ${payload.sub} - no email in token`
+        );
+        return;
+      }
+
+      // Parse name from token if available
+      const nameParts = payload.name?.split(" ") || [];
+      const firstName = nameParts[0] || null;
+      const lastName = nameParts.slice(1).join(" ") || null;
+
+      try {
+        account = await this.prisma.account.create({
+          data: {
+            logtoUserId: payload.sub,
+            email: payload.email,
+            firstName,
+            lastName,
+          },
+        });
+        console.log(
+          `[auth] Auto-provisioned account for ${payload.email} (${payload.sub})`
+        );
+      } catch (error) {
+        // Handle race condition - account may have been created by another request
+        account = await this.prisma.account.findUnique({
+          where: { logtoUserId: payload.sub },
+        });
+        if (!account) {
+          console.error(
+            `[auth] Failed to provision account for ${payload.sub}:`,
+            error
+          );
+          return;
+        }
+      }
     }
 
     // Update context with account info
