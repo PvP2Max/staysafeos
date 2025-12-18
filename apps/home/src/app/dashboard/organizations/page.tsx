@@ -9,11 +9,17 @@ export const metadata = {
 };
 
 export default async function OrganizationsPage() {
-  const api = await createApiClient();
-  const me = await api.getMyOrganizations();
+  let ownedOrgs: Array<{ id: string; slug: string; name: string; subscriptionTier: string }> = [];
+  let currentMembership: { id: string; role: string; tenantId: string } | undefined;
 
-  const ownedOrgs = me.ownedTenants || [];
-  const currentMembership = me.membership;
+  try {
+    const api = await createApiClient();
+    const me = await api.getMyOrganizations();
+    ownedOrgs = me.ownedTenants || [];
+    currentMembership = me.membership;
+  } catch {
+    // User may not have API access yet - show empty state
+  }
 
   return (
     <div className="space-y-6">
