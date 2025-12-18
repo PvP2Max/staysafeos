@@ -1,6 +1,6 @@
 import { getLogtoContext } from "@logto/next/server-actions";
 import { NextRequest, NextResponse } from "next/server";
-import { logtoConfig } from "@/lib/logto";
+import { getLogtoConfig } from "@/lib/logto";
 import { stripe, PRICE_IDS } from "@/lib/stripe";
 
 // Force runtime evaluation - env vars not available at build time on Render
@@ -16,7 +16,7 @@ function getBaseUrl() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { isAuthenticated, accessToken, claims } = await getLogtoContext(logtoConfig);
+    const { isAuthenticated, accessToken, claims } = await getLogtoContext(getLogtoConfig());
 
     if (!isAuthenticated) {
       return NextResponse.json(

@@ -21,10 +21,28 @@ export function getLogtoConfig(): LogtoNextConfig {
   };
 }
 
-// Backwards compatible export - calls getLogtoConfig() each time a property is accessed
+// Backwards compatible export - creates fresh config on every property access
+// Uses complete Proxy traps to handle spread, iteration, and all access patterns
 export const logtoConfig: LogtoNextConfig = new Proxy({} as LogtoNextConfig, {
-  get(_, prop: keyof LogtoNextConfig) {
-    return getLogtoConfig()[prop];
+  get(_, prop) {
+    return getLogtoConfig()[prop as keyof LogtoNextConfig];
+  },
+  has(_, prop) {
+    return prop in getLogtoConfig();
+  },
+  ownKeys() {
+    return Reflect.ownKeys(getLogtoConfig());
+  },
+  getOwnPropertyDescriptor(_, prop) {
+    const config = getLogtoConfig();
+    if (prop in config) {
+      return {
+        configurable: true,
+        enumerable: true,
+        value: config[prop as keyof LogtoNextConfig],
+      };
+    }
+    return undefined;
   },
 });
 
