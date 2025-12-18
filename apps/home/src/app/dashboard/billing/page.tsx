@@ -1,0 +1,101 @@
+import { getLogtoContext } from "@logto/next/server-actions";
+import { logtoConfig } from "@/lib/logto";
+import { createApiClient } from "@/lib/api/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge } from "@staysafeos/ui";
+import { PricingTable } from "./pricing-table";
+import { ManageSubscriptionButton } from "./manage-subscription-button";
+
+export const metadata = {
+  title: "Billing | StaySafeOS",
+  description: "Manage your subscription and billing",
+};
+
+const tierDetails: Record<string, { name: string; price: string; description: string }> = {
+  free: { name: "Free Trial", price: "$0", description: "10 rides/month, perfect for testing" },
+  starter: { name: "Starter", price: "$99/mo", description: "75 rides/month, 1 vehicle" },
+  growth: { name: "Growth", price: "$199/mo", description: "200 rides/month, 2 vehicles, custom branding" },
+  pro: { name: "Pro", price: "$299/mo", description: "400 rides/month, 3 vehicles, full features" },
+  enterprise: { name: "Enterprise", price: "$699/mo", description: "Unlimited rides, 5 vehicles, white-label" },
+};
+
+export default async function BillingPage() {
+  const { claims } = await getLogtoContext(logtoConfig);
+
+  let currentTier = "free";
+  let subscriptionStatus: string | null = null;
+  let organizationId: string | null = null;
+  let organizationName: string | null = null;
+
+  try {
+    const api = await createApiClient();
+    const me = await api.getMyOrganizations();
+    if (me.ownedTenants && me.ownedTenants.length > 0) {
+      const org = me.ownedTenants[0];
+      organizationId = org.id;
+      organizationName = org.name;
+      currentTier = org.subscriptionTier || "free";
+    }
+  } catch {
+    // User may not have API access yet
+  }
+
+  const tierInfo = tierDetails[currentTier] || tierDetails.free;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Billing</h1>
+        <p className="text-muted-foreground mt-1">
+          Manage your subscription and payment methods
+        </p>
+      </div>
+
+      {/* Current Plan */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Current Plan
+            <Badge variant={currentTier === "free" ? "secondary" : "default"}>
+              {tierInfo.name}
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            {organizationName ? `Subscription for ${organizationName}` : "No organization selected"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-3xl font-bold">{tierInfo.price}</p>
+              <p className="text-sm text-muted-foreground">{tierInfo.description}</p>
+            </div>
+            {organizationId && currentTier !== "free" && (
+              <ManageSubscriptionButton organizationId={organizationId} />
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Upgrade Options */}
+      {organizationId ? (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">
+            {currentTier === "free" ? "Choose a Plan" : "Change Plan"}
+          </h2>
+          <PricingTable currentTier={currentTier} organizationId={organizationId} />
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">
+              Create an organization first to manage billing.
+            </p>
+            <Button className="mt-4" asChild>
+              <a href="/dashboard/organizations">Go to Organizations</a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

@@ -1,9 +1,9 @@
-import { getLogtoContext, signOut } from "@logto/next/server-actions";
+import { getLogtoContext } from "@logto/next/server-actions";
 import { redirect } from "next/navigation";
 import { logtoConfig } from "@/lib/logto";
-import { Button } from "@staysafeos/ui";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { ProfileDropdown } from "@/components/profile-dropdown";
 
 export default async function DashboardLayout({
   children,
@@ -38,26 +38,13 @@ export default async function DashboardLayout({
               <Link href="/dashboard/pages" className="text-muted-foreground hover:text-foreground">
                 Pages
               </Link>
-              <Link href="/dashboard/settings" className="text-muted-foreground hover:text-foreground">
-                Settings
-              </Link>
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden sm:inline">
-              {claims?.email}
-            </span>
-            <form
-              action={async () => {
-                "use server";
-                await signOut(logtoConfig);
-              }}
-            >
-              <Button variant="ghost" size="sm" type="submit">
-                Sign Out
-              </Button>
-            </form>
-          </div>
+          <ProfileDropdown
+            name={claims?.name as string | undefined}
+            email={claims?.email as string | undefined}
+            avatarUrl={claims?.picture as string | undefined}
+          />
         </div>
       </header>
 
