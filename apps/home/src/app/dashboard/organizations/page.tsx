@@ -15,9 +15,11 @@ export default async function OrganizationsPage() {
   try {
     const api = await createApiClient();
     const me = await api.getMyOrganizations();
+    console.log("[organizations] API response:", JSON.stringify(me, null, 2));
     ownedOrgs = me.ownedTenants || [];
     currentMembership = me.membership;
-  } catch {
+  } catch (error) {
+    console.error("[organizations] Error fetching organizations:", error);
     // User may not have API access yet - show empty state
   }
 
