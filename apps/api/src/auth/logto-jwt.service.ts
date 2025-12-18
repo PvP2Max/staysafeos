@@ -37,7 +37,8 @@ export class LogtoJwtService implements OnModuleInit {
       return;
     }
 
-    this.issuer = logtoEndpoint;
+    // Logto's OIDC issuer includes /oidc path
+    this.issuer = `${logtoEndpoint}/oidc`;
 
     // Fetch JWKS from Logto's well-known endpoint
     const jwksUri = `${logtoEndpoint}/oidc/jwks`;
