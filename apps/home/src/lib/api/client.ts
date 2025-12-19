@@ -52,9 +52,13 @@ export class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const headers: HeadersInit = {
-      "Content-Type": "application/json",
       ...options.headers,
     };
+
+    // Only set Content-Type for requests with a body
+    if (options.body) {
+      (headers as Record<string, string>)["Content-Type"] = "application/json";
+    }
 
     if (this.accessToken) {
       (headers as Record<string, string>)["Authorization"] = `Bearer ${this.accessToken}`;
