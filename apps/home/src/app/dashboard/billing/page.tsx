@@ -1,9 +1,7 @@
-import { getLogtoContext } from "@logto/next/server-actions";
-import { logtoConfig } from "@/lib/logto";
-import { createApiClient } from "@/lib/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge } from "@staysafeos/ui";
 import { PricingTable } from "./pricing-table";
 import { ManageSubscriptionButton } from "./manage-subscription-button";
+import { headers } from "next/headers";
 
 export const metadata = {
   title: "Billing | StaySafeOS",
@@ -18,18 +16,29 @@ const tierDetails: Record<string, { name: string; price: string; description: st
   enterprise: { name: "Enterprise", price: "$699/mo", description: "Unlimited rides, 5 vehicles, white-label" },
 };
 
-export default async function BillingPage() {
-  const { claims } = await getLogtoContext(logtoConfig);
+async function fetchMyOrganizations() {
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const cookie = headersList.get("cookie") || "";
 
+  const response = await fetch(`${protocol}://${host}/api/me`, {
+    headers: { cookie },
+    cache: "no-store",
+  });
+
+  if (!response.ok) return null;
+  return response.json();
+}
+
+export default async function BillingPage() {
   let currentTier = "free";
-  let subscriptionStatus: string | null = null;
   let organizationId: string | null = null;
   let organizationName: string | null = null;
 
   try {
-    const api = await createApiClient();
-    const me = await api.getMyOrganizations();
-    if (me.ownedTenants && me.ownedTenants.length > 0) {
+    const me = await fetchMyOrganizations();
+    if (me?.ownedTenants && me.ownedTenants.length > 0) {
       const org = me.ownedTenants[0];
       organizationId = org.id;
       organizationName = org.name;
