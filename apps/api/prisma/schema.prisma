@@ -487,6 +487,22 @@ model AuditLog {
 }
 
 // ========================================
+// Global Statistics (Marketing)
+// ========================================
+
+model GlobalStats {
+  id                        String   @id @default("singleton")
+  totalRidesCompleted       Int      @default(0) @map("total_rides_completed")
+  totalVolunteersTrained    Int      @default(0) @map("total_volunteers_trained")
+  totalOrganizationsServed  Int      @default(0) @map("total_organizations_served")
+  totalOrganizationsDeleted Int      @default(0) @map("total_organizations_deleted")
+  totalVansRegistered       Int      @default(0) @map("total_vans_registered")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@map("global_stats")
+}
+
+// ========================================
 // Enums as reference
 // ========================================
 // Roles: RIDER, SAFETY, DRIVER, TC, DISPATCHER, EXECUTIVE, ADMIN

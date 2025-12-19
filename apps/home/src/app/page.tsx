@@ -2,7 +2,35 @@ import { Button } from "@staysafeos/ui";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 
-export default function HomePage() {
+interface GlobalStats {
+  totalRidesCompleted: number;
+  totalVolunteersTrained: number;
+  totalOrganizationsServed: number;
+}
+
+async function fetchGlobalStats(): Promise<GlobalStats | null> {
+  try {
+    const apiUrl = process.env.API_URL || "https://api.staysafeos.com";
+    const response = await fetch(`${apiUrl}/v1/global-stats`, {
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1000) {
+    return `${Math.floor(num / 1000)}k+`;
+  }
+  return num > 0 ? `${num}+` : "0";
+}
+
+export default async function HomePage() {
+  const stats = await fetchGlobalStats();
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -76,9 +104,9 @@ export default function HomePage() {
         <section className="border-y bg-muted/30">
           <div className="container mx-auto px-4 py-12">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              <StatItem value="50,000+" label="Safe Rides Completed" />
-              <StatItem value="500+" label="Active Volunteers" />
-              <StatItem value="99.9%" label="Uptime" />
+              <StatItem value={stats ? formatNumber(stats.totalRidesCompleted) : "50,000+"} label="Safe Rides Completed" />
+              <StatItem value={stats ? formatNumber(stats.totalVolunteersTrained) : "500+"} label="Volunteers Trained" />
+              <StatItem value={stats ? formatNumber(stats.totalOrganizationsServed) : "50+"} label="Organizations Served" />
               <StatItem value="24/7" label="Support Available" />
             </div>
           </div>

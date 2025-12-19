@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Query, Body, BadRequestException, Headers, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, BadRequestException, Headers, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { TenantsService } from "./tenants.service";
 import { LogtoAuthGuard, Public } from "../auth/logto-auth.guard";
 import { CreateTenantDto } from "./dto/create-tenant.dto";
@@ -129,6 +129,49 @@ export class OrganizationsController {
     }
 
     return this.tenantsService.updateStripeCustomer(id, body.stripeCustomerId);
+  }
+
+  /**
+   * Get organization features (owner only)
+   */
+  @Get(":id/features")
+  async getFeatures(@Param("id") id: string) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    return this.tenantsService.getOrganizationFeatures(id, accountId);
+  }
+
+  /**
+   * Update organization features (owner only)
+   */
+  @Patch(":id/features")
+  async updateFeatures(
+    @Param("id") id: string,
+    @Body() body: Record<string, boolean>
+  ) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    return this.tenantsService.updateOrganizationFeatures(id, accountId, body);
+  }
+
+  /**
+   * Delete organization (owner only)
+   * Archives stats to GlobalStats before hard deletion
+   */
+  @Delete(":id")
+  async deleteOrganization(@Param("id") id: string) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    return this.tenantsService.deleteOrganization(id, accountId);
   }
 }
 

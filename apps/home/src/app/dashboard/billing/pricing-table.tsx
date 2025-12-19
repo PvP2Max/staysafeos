@@ -6,6 +6,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badg
 interface PricingTableProps {
   currentTier: string;
   organizationId: string;
+  organizationName?: string;
 }
 
 const plans = [
@@ -68,10 +69,10 @@ const plans = [
   {
     id: "enterprise",
     name: "Enterprise",
-    price: 699,
+    price: "Custom",
     description: "Everything, unlimited",
     features: [
-      "5 active vehicles",
+      "5+ active vehicles",
       "Unlimited rides",
       "White-label branding",
       "Priority email support",
@@ -83,15 +84,24 @@ const plans = [
       vehicles: 5,
       rides: "Unlimited",
     },
+    contactSales: true,
   },
 ];
 
 const tierOrder = ["free", "starter", "growth", "pro", "enterprise"];
 
-export function PricingTable({ currentTier, organizationId }: PricingTableProps) {
+export function PricingTable({ currentTier, organizationId, organizationName }: PricingTableProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
   const currentTierIndex = tierOrder.indexOf(currentTier);
+
+  const getEnterpriseMailtoLink = () => {
+    const subject = encodeURIComponent(`Enterprise Inquiry - ${organizationName || "My Organization"}`);
+    const body = encodeURIComponent(
+      `Organization: ${organizationName || "N/A"}\nOrganization ID: ${organizationId}\n\nI'm interested in learning more about StaySafeOS Enterprise pricing for our program.\n\nPlease tell us about your needs:\n- Number of vehicles:\n- Expected monthly rides:\n- Any special requirements:\n`
+    );
+    return `mailto:info@staysafeos.com?subject=${subject}&body=${body}`;
+  };
 
   const handleSelectPlan = async (planId: string) => {
     setLoading(planId);
@@ -145,8 +155,14 @@ export function PricingTable({ currentTier, organizationId }: PricingTableProps)
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <span className="text-3xl font-bold">${plan.price}</span>
-                <span className="text-muted-foreground">/month</span>
+                {typeof plan.price === "number" ? (
+                  <>
+                    <span className="text-3xl font-bold">${plan.price}</span>
+                    <span className="text-muted-foreground">/month</span>
+                  </>
+                ) : (
+                  <span className="text-3xl font-bold">{plan.price}</span>
+                )}
               </div>
 
               <ul className="space-y-2 text-sm">
@@ -158,20 +174,35 @@ export function PricingTable({ currentTier, organizationId }: PricingTableProps)
                 ))}
               </ul>
 
-              <Button
-                className="w-full"
-                variant={isCurrentPlan ? "outline" : plan.popular ? "default" : "outline"}
-                disabled={isCurrentPlan || loading !== null}
-                onClick={() => handleSelectPlan(plan.id)}
-              >
-                {loading === plan.id
-                  ? "Loading..."
-                  : isCurrentPlan
-                  ? "Current Plan"
-                  : isDowngrade
-                  ? "Downgrade"
-                  : "Upgrade"}
-              </Button>
+              {"contactSales" in plan && plan.contactSales ? (
+                <Button
+                  className="w-full"
+                  variant={isCurrentPlan ? "outline" : "default"}
+                  disabled={isCurrentPlan}
+                  asChild={!isCurrentPlan}
+                >
+                  {isCurrentPlan ? (
+                    <span>Current Plan</span>
+                  ) : (
+                    <a href={getEnterpriseMailtoLink()}>Contact Sales</a>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  variant={isCurrentPlan ? "outline" : plan.popular ? "default" : "outline"}
+                  disabled={isCurrentPlan || loading !== null}
+                  onClick={() => handleSelectPlan(plan.id)}
+                >
+                  {loading === plan.id
+                    ? "Loading..."
+                    : isCurrentPlan
+                    ? "Current Plan"
+                    : isDowngrade
+                    ? "Downgrade"
+                    : "Upgrade"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         );

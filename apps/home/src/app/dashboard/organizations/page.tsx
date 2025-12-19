@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Badge } from "@staysafeos/ui";
 import Link from "next/link";
 import { CreateOrgDialog } from "./create-org-dialog";
+import { OrgSettingsDialog } from "./org-settings-dialog";
+import { DeleteOrgDialog } from "./delete-org-dialog";
 import { headers } from "next/headers";
 
 export const metadata = {
@@ -90,6 +92,10 @@ export default async function OrganizationsPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <OrgSettingsDialog
+                      organizationId={org.id}
+                      organizationName={org.name}
+                    />
                     <a
                       href={`https://${org.slug}.staysafeos.com`}
                       target="_blank"
@@ -99,6 +105,10 @@ export default async function OrganizationsPage() {
                         Visit App
                       </Button>
                     </a>
+                    <DeleteOrgDialog
+                      organizationId={org.id}
+                      organizationName={org.name}
+                    />
                   </div>
                 </div>
               ))}

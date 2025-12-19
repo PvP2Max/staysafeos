@@ -1,13 +1,15 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 import { CreateTenantDto } from "./dto/create-tenant.dto";
+import { GlobalStatsService } from "../global-stats/global-stats.service";
 
 @Injectable()
 export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly requestContext: RequestContextService
+    private readonly requestContext: RequestContextService,
+    private readonly globalStatsService: GlobalStatsService
   ) {}
 
   /**
@@ -182,5 +184,128 @@ export class TenantsService {
         stripeSubscriptionId: true,
       },
     });
+  }
+
+  /**
+   * Get organization features by ID (owner only)
+   */
+  async getOrganizationFeatures(orgId: string, accountId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      include: { settings: true },
+    });
+
+    if (!org) {
+      throw new NotFoundException("Organization not found");
+    }
+
+    if (org.ownerAccountId !== accountId) {
+      throw new ForbiddenException("Only the organization owner can view settings");
+    }
+
+    // Map settings to feature toggles format
+    const settings = org.settings;
+    return {
+      organizationId: org.id,
+      organizationName: org.name,
+      features: {
+        rideRequests: settings?.dispatcherEnabled ?? true,
+        walkOns: settings?.driverEnabled ?? true,
+        tcTransfers: settings?.safetyEnabled ?? true,
+        training: true, // Could be based on subscription tier
+        shifts: true, // Could be based on subscription tier
+        analytics: true, // Could be based on subscription tier
+        supportCodes: true, // Could be based on subscription tier
+      },
+    };
+  }
+
+  /**
+   * Update organization features by ID (owner only)
+   */
+  async updateOrganizationFeatures(
+    orgId: string,
+    accountId: string,
+    features: Record<string, boolean>
+  ) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { ownerAccountId: true },
+    });
+
+    if (!org) {
+      throw new NotFoundException("Organization not found");
+    }
+
+    if (org.ownerAccountId !== accountId) {
+      throw new ForbiddenException("Only the organization owner can update settings");
+    }
+
+    // Map feature toggles to settings fields
+    const settingsUpdate: Record<string, boolean> = {};
+    if (features.rideRequests !== undefined) settingsUpdate.dispatcherEnabled = features.rideRequests;
+    if (features.walkOns !== undefined) settingsUpdate.driverEnabled = features.walkOns;
+    if (features.tcTransfers !== undefined) settingsUpdate.safetyEnabled = features.tcTransfers;
+
+    await this.prisma.organizationSettings.upsert({
+      where: { organizationId: orgId },
+      create: {
+        organizationId: orgId,
+        ...settingsUpdate,
+      },
+      update: settingsUpdate,
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Delete an organization (owner only)
+   * Archives stats to GlobalStats before hard deletion
+   */
+  async deleteOrganization(orgId: string, accountId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        id: true,
+        name: true,
+        ownerAccountId: true,
+        themeId: true,
+      },
+    });
+
+    if (!org) {
+      throw new NotFoundException("Organization not found");
+    }
+
+    if (org.ownerAccountId !== accountId) {
+      throw new ForbiddenException("Only the organization owner can delete the organization");
+    }
+
+    // Archive stats to GlobalStats before deletion
+    const archivedStats = await this.globalStatsService.archiveOrganizationStats(orgId);
+
+    // Delete the organization (cascades to all related data)
+    await this.prisma.$transaction(async (tx) => {
+      // Delete the organization (cascade handles related data)
+      await tx.organization.delete({
+        where: { id: orgId },
+      });
+
+      // Delete the theme if it exists (not cascaded)
+      if (org.themeId) {
+        await tx.theme.delete({
+          where: { id: org.themeId },
+        }).catch(() => {
+          // Ignore if theme doesn't exist or is used elsewhere
+        });
+      }
+    });
+
+    return {
+      success: true,
+      organizationName: org.name,
+      archivedStats,
+    };
   }
 }
