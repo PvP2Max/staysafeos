@@ -1,4 +1,5 @@
 import { getLogtoContext } from "@logto/next/server-actions";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 
@@ -10,9 +11,18 @@ function getApiBaseUrl() {
 }
 
 /**
- * Get the organization ID from API (database ID, not Logto ID)
+ * Get the organization ID - first check cookie, then fall back to API
  */
 async function getOrganizationId(accessToken: string): Promise<string | undefined> {
+  // Check for selected org in cookie first
+  const cookieStore = await cookies();
+  const selectedOrgId = cookieStore.get("staysafeos_current_org")?.value;
+
+  if (selectedOrgId) {
+    return selectedOrgId;
+  }
+
+  // Fall back to fetching from API
   try {
     const response = await fetch(`${getApiBaseUrl()}/v1/me`, {
       headers: {

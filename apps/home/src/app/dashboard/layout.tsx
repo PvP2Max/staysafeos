@@ -4,6 +4,7 @@ import { logtoConfig } from "@/lib/logto";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { ProfileDropdown } from "@/components/profile-dropdown";
+import { OrgSwitcher } from "@/components/org-switcher";
 
 export default async function DashboardLayout({
   children,
@@ -40,11 +41,14 @@ export default async function DashboardLayout({
               </Link>
             </nav>
           </div>
-          <ProfileDropdown
-            name={claims?.name as string | undefined}
-            email={claims?.email as string | undefined}
-            avatarUrl={claims?.picture as string | undefined}
-          />
+          <div className="flex items-center gap-4">
+            <OrgSwitcher />
+            <ProfileDropdown
+              name={claims?.name as string | undefined}
+              email={claims?.email as string | undefined}
+              avatarUrl={claims?.picture as string | undefined}
+            />
+          </div>
         </div>
       </header>
 

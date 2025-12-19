@@ -4,6 +4,7 @@
  */
 
 import { getLogtoContext } from "@logto/next/server-actions";
+import { cookies } from "next/headers";
 import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 import type { ApiError, Partner } from "./types";
 
@@ -301,25 +302,31 @@ export async function createApiClient(): Promise<ApiClient> {
     throw new Error("Could not get API access token");
   }
 
-  // Get the user's organizations from the API to get the database org ID
-  // (Logto org IDs don't match database IDs, so we need to fetch the real ones)
-  let tenantId: string | undefined;
-  try {
-    const response = await fetch(`${API_BASE_URL}/v1/me`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    });
-    if (response.ok) {
-      const me = await response.json();
-      // Use the first owned tenant's ID, or fall back to membership's tenant
-      const ownedTenants = me.ownedTenants as Array<{ id: string }> | undefined;
-      const membership = me.membership as { tenantId: string } | undefined;
-      tenantId = ownedTenants?.[0]?.id || membership?.tenantId;
+  // Check for selected org in cookie first
+  const cookieStore = await cookies();
+  const selectedOrgId = cookieStore.get("staysafeos_current_org")?.value;
+
+  let tenantId: string | undefined = selectedOrgId;
+
+  // If no cookie, fall back to fetching user's default org
+  if (!tenantId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/me`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const me = await response.json();
+        // Use the first owned tenant's ID, or fall back to membership's tenant
+        const ownedTenants = me.ownedTenants as Array<{ id: string }> | undefined;
+        const membership = me.membership as { tenantId: string } | undefined;
+        tenantId = ownedTenants?.[0]?.id || membership?.tenantId;
+      }
+    } catch {
+      // If we can't fetch, proceed without tenant context
     }
-  } catch {
-    // If we can't fetch, proceed without tenant context
   }
 
   return new ApiClient(accessToken, tenantId);
