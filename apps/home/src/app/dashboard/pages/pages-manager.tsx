@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -146,6 +147,11 @@ export function PagesManager({ pages: initialPages }: PagesManagerProps) {
                     <p className="text-sm text-muted-foreground">/{page.slug}</p>
                   </div>
                   <div className="flex gap-2">
+                    <Link href={`/dashboard/pages/${page.id}`}>
+                      <Button variant="default" size="sm">
+                        Edit Content
+                      </Button>
+                    </Link>
                     <Button
                       variant="outline"
                       size="sm"
@@ -162,7 +168,7 @@ export function PagesManager({ pages: initialPages }: PagesManagerProps) {
                         setEditTitle(page.title);
                       }}
                     >
-                      Edit
+                      Rename
                     </Button>
                     <Button
                       variant="ghost"

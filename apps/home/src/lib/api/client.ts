@@ -179,19 +179,19 @@ export class ApiClient {
       id: string;
       slug: string;
       title: string;
-      content: unknown;
+      blocks: unknown;
       published: boolean;
     }>(`/v1/pages/${idOrSlug}`);
   }
 
-  async createPage(data: { slug: string; title: string; content?: unknown }) {
+  async createPage(data: { slug: string; title: string; blocks?: unknown }) {
     return this.fetch("/v1/pages", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async updatePage(id: string, data: { title?: string; content?: unknown; published?: boolean }) {
+  async updatePage(id: string, data: { title?: string; blocks?: unknown; published?: boolean }) {
     return this.fetch(`/v1/pages/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),

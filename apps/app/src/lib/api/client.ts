@@ -322,3 +322,62 @@ export async function createApiClient(): Promise<ApiClient> {
 export function createClientApiClient(accessToken: string, tenantId?: string): ApiClient {
   return new ApiClient(accessToken, tenantId);
 }
+
+/**
+ * Public page data structure
+ */
+export interface PublicPage {
+  id: string;
+  slug: string;
+  title: string;
+  content: TiptapDoc;
+  published: boolean;
+}
+
+export interface TiptapDoc {
+  type: "doc";
+  content: TiptapNode[];
+}
+
+export interface TiptapNode {
+  type: string;
+  attrs?: Record<string, unknown>;
+  content?: TiptapNode[];
+  text?: string;
+  marks?: TiptapMark[];
+}
+
+export interface TiptapMark {
+  type: string;
+  attrs?: Record<string, unknown>;
+}
+
+/**
+ * Fetch a public page without authentication
+ * This is used for rendering tenant pages on subdomains
+ */
+export async function getPublicPage(tenantSlug: string, pageSlug: string): Promise<PublicPage | null> {
+  const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/v1/pages/public/${tenantSlug}/${pageSlug}`, {
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to fetch page: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data as PublicPage;
+  } catch (error) {
+    console.error("Error fetching public page:", error);
+    return null;
+  }
+}

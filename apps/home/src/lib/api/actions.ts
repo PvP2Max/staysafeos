@@ -94,6 +94,22 @@ export async function deletePage(id: string) {
   return { success: true };
 }
 
+export async function updatePageContent(id: string, blocks: unknown) {
+  const api = await createApiClient();
+  await api.updatePage(id, { blocks });
+  revalidatePath("/dashboard/pages");
+  revalidatePath(`/dashboard/pages/${id}`);
+  return { success: true };
+}
+
+export async function togglePagePublished(id: string, published: boolean) {
+  const api = await createApiClient();
+  await api.updatePage(id, { published });
+  revalidatePath("/dashboard/pages");
+  revalidatePath(`/dashboard/pages/${id}`);
+  return { success: true };
+}
+
 // Van management
 export async function createVan(formData: FormData) {
   const api = await createApiClient();
