@@ -186,17 +186,43 @@ export class ApiClient {
       title: string;
       blocks: unknown;
       published: boolean;
+      editorType: "tiptap" | "grapesjs";
+      htmlContent?: string;
+      cssContent?: string;
+      gjsComponents?: unknown;
+      gjsStyles?: unknown;
+      templateId?: string;
+      isLandingPage: boolean;
     }>(`/v1/pages/${idOrSlug}`);
   }
 
-  async createPage(data: { slug: string; title: string; blocks?: unknown }) {
+  async createPage(data: {
+    slug: string;
+    title: string;
+    blocks?: unknown;
+    editorType?: "tiptap" | "grapesjs";
+    htmlContent?: string;
+    cssContent?: string;
+    gjsComponents?: unknown;
+    gjsStyles?: unknown;
+    templateId?: string;
+    isLandingPage?: boolean;
+  }) {
     return this.fetch("/v1/pages", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async updatePage(id: string, data: { title?: string; blocks?: unknown; published?: boolean }) {
+  async updatePage(id: string, data: {
+    title?: string;
+    blocks?: unknown;
+    published?: boolean;
+    htmlContent?: string;
+    cssContent?: string;
+    gjsComponents?: unknown;
+    gjsStyles?: unknown;
+  }) {
     return this.fetch(`/v1/pages/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -286,6 +312,91 @@ export class ApiClient {
       membership?: { id: string; role: string; tenantId: string };
       ownedTenants: Array<{ id: string; slug: string; name: string; subscriptionTier: string }>;
     }>("/v1/me");
+  }
+
+  // Domains endpoints
+  async getDomains() {
+    return this.fetch<Array<{
+      id: string;
+      domain: string;
+      isPrimary: boolean;
+      verifiedAt: string | null;
+      sslProvisioned: boolean;
+      createdAt: string;
+      dnsRecords: Array<{
+        type: string;
+        name: string;
+        value: string;
+        status: "pending" | "verified" | "error";
+      }>;
+    }>>("/v1/domains");
+  }
+
+  async addDomain(data: { domain: string; isPrimary?: boolean }) {
+    return this.fetch<{
+      id: string;
+      domain: string;
+      isPrimary: boolean;
+      verifiedAt: string | null;
+      sslProvisioned: boolean;
+      createdAt: string;
+      dnsRecords: Array<{
+        type: string;
+        name: string;
+        value: string;
+        status: "pending" | "verified" | "error";
+      }>;
+    }>("/v1/domains", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getDomain(id: string) {
+    return this.fetch<{
+      id: string;
+      domain: string;
+      isPrimary: boolean;
+      verifiedAt: string | null;
+      sslProvisioned: boolean;
+      dnsRecords: Array<{
+        type: string;
+        name: string;
+        value: string;
+        status: "pending" | "verified" | "error";
+      }>;
+    }>(`/v1/domains/${id}`);
+  }
+
+  async verifyDomain(id: string) {
+    return this.fetch<{
+      id: string;
+      domain: string;
+      isPrimary: boolean;
+      verifiedAt: string | null;
+      sslProvisioned: boolean;
+      createdAt: string;
+      dnsRecords: Array<{
+        type: string;
+        name: string;
+        value: string;
+        status: "pending" | "verified" | "error";
+      }>;
+    }>(`/v1/domains/${id}/verify`, {
+      method: "POST",
+    });
+  }
+
+  async setPrimaryDomain(id: string) {
+    return this.fetch(`/v1/domains/${id}/primary`, {
+      method: "POST",
+    });
+  }
+
+  async deleteDomain(id: string) {
+    return this.fetch(`/v1/domains/${id}`, {
+      method: "DELETE",
+    });
   }
 }
 

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { getPublicPage } from "@/lib/api/client";
 import { PageRenderer } from "@/components/page-renderer";
+import { GrapesJSRenderer } from "@/components/grapesjs-renderer";
 
 interface PublicPageProps {
   params: Promise<{ slug: string }>;
@@ -24,6 +25,16 @@ export default async function PublicPage({ params }: PublicPageProps) {
     notFound();
   }
 
+  // Render GrapesJS pages differently (full-width, no wrapper)
+  if (page.editorType === "grapesjs" && page.htmlContent) {
+    return (
+      <div className="min-h-screen">
+        <GrapesJSRenderer html={page.htmlContent} css={page.cssContent || ""} />
+      </div>
+    );
+  }
+
+  // Render Tiptap pages with article wrapper
   return (
     <div className="min-h-screen bg-background">
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

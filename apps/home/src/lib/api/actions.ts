@@ -64,12 +64,48 @@ export async function removeMember(membershipId: string) {
 export async function createPage(formData: FormData) {
   const api = await createApiClient();
 
-  const data = {
+  const editorType = formData.get("editorType") as "tiptap" | "grapesjs" | null;
+  const isLandingPage = formData.get("isLandingPage") === "true";
+  const templateId = formData.get("templateId") as string | null;
+  const htmlContent = formData.get("htmlContent") as string | null;
+  const cssContent = formData.get("cssContent") as string | null;
+
+  const data: Parameters<typeof api.createPage>[0] = {
     slug: formData.get("slug") as string,
     title: formData.get("title") as string,
+    editorType: editorType || "tiptap",
+    isLandingPage,
   };
 
+  if (templateId) data.templateId = templateId;
+  if (htmlContent) data.htmlContent = htmlContent;
+  if (cssContent) data.cssContent = cssContent;
+
   await api.createPage(data);
+  revalidatePath("/dashboard/pages");
+  return { success: true };
+}
+
+export async function createPageFromTemplate(
+  slug: string,
+  title: string,
+  templateHtml: string,
+  templateCss: string,
+  templateId: string,
+  isLandingPage: boolean = true
+) {
+  const api = await createApiClient();
+
+  await api.createPage({
+    slug,
+    title,
+    editorType: "grapesjs",
+    htmlContent: templateHtml,
+    cssContent: templateCss,
+    templateId,
+    isLandingPage,
+  });
+
   revalidatePath("/dashboard/pages");
   return { success: true };
 }
@@ -97,6 +133,27 @@ export async function deletePage(id: string) {
 export async function updatePageContent(id: string, blocks: unknown) {
   const api = await createApiClient();
   await api.updatePage(id, { blocks });
+  revalidatePath("/dashboard/pages");
+  revalidatePath(`/dashboard/pages/${id}`);
+  return { success: true };
+}
+
+export async function updateGrapesJSContent(
+  id: string,
+  data: {
+    html: string;
+    css: string;
+    components: unknown;
+    styles: unknown;
+  }
+) {
+  const api = await createApiClient();
+  await api.updatePage(id, {
+    htmlContent: data.html,
+    cssContent: data.css,
+    gjsComponents: data.components,
+    gjsStyles: data.styles,
+  });
   revalidatePath("/dashboard/pages");
   revalidatePath(`/dashboard/pages/${id}`);
   return { success: true };
@@ -149,5 +206,34 @@ export async function deleteVan(id: string) {
   const api = await createApiClient();
   await api.deleteVan(id);
   revalidatePath("/dashboard/fleet");
+  return { success: true };
+}
+
+// Domain management
+export async function addDomain(domain: string, isPrimary: boolean = false) {
+  const api = await createApiClient();
+  const result = await api.addDomain({ domain, isPrimary });
+  revalidatePath("/dashboard/domains");
+  return result;
+}
+
+export async function verifyDomain(id: string) {
+  const api = await createApiClient();
+  const result = await api.verifyDomain(id);
+  revalidatePath("/dashboard/domains");
+  return result;
+}
+
+export async function setPrimaryDomain(id: string) {
+  const api = await createApiClient();
+  await api.setPrimaryDomain(id);
+  revalidatePath("/dashboard/domains");
+  return { success: true };
+}
+
+export async function deleteDomain(id: string) {
+  const api = await createApiClient();
+  await api.deleteDomain(id);
+  revalidatePath("/dashboard/domains");
   return { success: true };
 }

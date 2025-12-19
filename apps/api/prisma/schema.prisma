@@ -141,13 +141,16 @@ model Theme {
 }
 
 model Domain {
-  id             String       @id @default(cuid())
-  organizationId String       @map("organization_id")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  domain         String       @unique
-  isPrimary      Boolean      @default(false) @map("is_primary")
-  verifiedAt     DateTime?    @map("verified_at")
-  createdAt      DateTime     @default(now()) @map("created_at")
+  id                String       @id @default(cuid())
+  organizationId    String       @map("organization_id")
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  domain            String       @unique
+  isPrimary         Boolean      @default(false) @map("is_primary")
+  verificationToken String       @unique @map("verification_token") // Token for DNS TXT record verification
+  verifiedAt        DateTime?    @map("verified_at")
+  sslProvisioned    Boolean      @default(false) @map("ssl_provisioned")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   @@map("domains")
 }
@@ -158,10 +161,19 @@ model Page {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   slug           String       // "home", "volunteer", "terms", etc.
   title          String
-  blocks         Json         @default("[]") // Block editor content
+  blocks         Json         @default("[]") // Tiptap block editor content (legacy)
   published      Boolean      @default(false)
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  // GrapesJS page builder fields
+  editorType    String   @default("tiptap") @map("editor_type") // "tiptap" | "grapesjs"
+  htmlContent   String?  @map("html_content")                    // GrapesJS HTML output
+  cssContent    String?  @map("css_content")                     // GrapesJS CSS output
+  gjsComponents Json?    @map("gjs_components")                  // GrapesJS component JSON (for re-editing)
+  gjsStyles     Json?    @map("gjs_styles")                      // GrapesJS style JSON (for re-editing)
+  templateId    String?  @map("template_id")                     // Template reference for Growth tier
+  isLandingPage Boolean  @default(false) @map("is_landing_page") // Main landing page for tenant
 
   @@unique([organizationId, slug])
   @@map("pages")

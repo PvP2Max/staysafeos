@@ -38,22 +38,48 @@ export const PRICE_IDS: Record<string, string> = new Proxy({} as Record<string, 
   },
 });
 
+// Page builder levels
+export type PageBuilderLevel = "none" | "template" | "full";
+
 // Plan limits for feature gating
-export const PLAN_LIMITS: Record<string, { vehicles: number; rides: number | null; features: string[] }> = {
+export const PLAN_LIMITS: Record<string, {
+  vehicles: number;
+  rides: number | null;
+  features: string[];
+  pageBuilderLevel: PageBuilderLevel;
+  canEditFooter: boolean;
+  canCreateMultiplePages: boolean;
+}> = {
   free: {
     vehicles: 0,
     rides: 10,
     features: [],
+    pageBuilderLevel: "none",
+    canEditFooter: false,
+    canCreateMultiplePages: false,
   },
   starter: {
     vehicles: 1,
     rides: 75,
     features: ["basic_export", "advanced_export"],
+    pageBuilderLevel: "none",
+    canEditFooter: false,
+    canCreateMultiplePages: false,
   },
   growth: {
     vehicles: 2,
     rides: 200,
-    features: ["basic_export", "advanced_export", "emergency_export", "custom_branding", "custom_domain", "discord"],
+    features: [
+      "basic_export",
+      "advanced_export",
+      "emergency_export",
+      "custom_branding",
+      "landing_page_builder",
+      "discord",
+    ],
+    pageBuilderLevel: "template",
+    canEditFooter: false,
+    canCreateMultiplePages: false,
   },
   pro: {
     vehicles: 3,
@@ -64,7 +90,7 @@ export const PLAN_LIMITS: Record<string, { vehicles: number; rides: number | nul
       "emergency_export",
       "custom_branding",
       "custom_domain",
-      "custom_homepage",
+      "landing_page_builder",
       "training",
       "custom_emergency",
       "personalized_training",
@@ -72,6 +98,9 @@ export const PLAN_LIMITS: Record<string, { vehicles: number; rides: number | nul
       "discord",
       "email_support",
     ],
+    pageBuilderLevel: "full",
+    canEditFooter: false,
+    canCreateMultiplePages: false,
   },
   enterprise: {
     vehicles: 5,
@@ -82,7 +111,8 @@ export const PLAN_LIMITS: Record<string, { vehicles: number; rides: number | nul
       "emergency_export",
       "custom_branding",
       "custom_domain",
-      "custom_homepage",
+      "landing_page_builder",
+      "multiple_pages",
       "training",
       "custom_emergency",
       "personalized_training",
@@ -96,5 +126,13 @@ export const PLAN_LIMITS: Record<string, { vehicles: number; rides: number | nul
       "white_label",
       "app_access",
     ],
+    pageBuilderLevel: "full",
+    canEditFooter: true,
+    canCreateMultiplePages: true,
   },
 };
+
+// Helper function to get plan limits
+export function getPlanLimits(tier: string) {
+  return PLAN_LIMITS[tier] || PLAN_LIMITS.free;
+}

@@ -332,6 +332,9 @@ export interface PublicPage {
   title: string;
   content: TiptapDoc;
   published: boolean;
+  editorType: "tiptap" | "grapesjs";
+  htmlContent?: string;
+  cssContent?: string;
 }
 
 export interface TiptapDoc {

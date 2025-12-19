@@ -3,6 +3,34 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 
+// Editor types supported
+export type EditorType = "tiptap" | "grapesjs";
+
+// Create page input
+export interface CreatePageInput {
+  slug: string;
+  title: string;
+  editorType?: EditorType;
+  blocks?: Prisma.InputJsonValue;
+  htmlContent?: string;
+  cssContent?: string;
+  gjsComponents?: Prisma.InputJsonValue;
+  gjsStyles?: Prisma.InputJsonValue;
+  templateId?: string;
+  isLandingPage?: boolean;
+}
+
+// Update page input
+export interface UpdatePageInput {
+  title?: string;
+  published?: boolean;
+  blocks?: Prisma.InputJsonValue;
+  htmlContent?: string;
+  cssContent?: string;
+  gjsComponents?: Prisma.InputJsonValue;
+  gjsStyles?: Prisma.InputJsonValue;
+}
+
 @Injectable()
 export class PagesService {
   constructor(
@@ -82,6 +110,18 @@ export class PagesService {
         slug: true,
         title: true,
         published: true,
+        editorType: true,
+        isLandingPage: true,
+      },
+    });
+  }
+
+  async findLandingPageForTenant(organizationId: string) {
+    return this.prisma.page.findFirst({
+      where: {
+        organizationId,
+        isLandingPage: true,
+        published: true,
       },
     });
   }
@@ -103,26 +143,26 @@ export class PagesService {
     return page;
   }
 
-  async createPageForCurrentTenant(data: {
-    slug: string;
-    title: string;
-    blocks?: Prisma.InputJsonValue;
-  }) {
+  async createPageForCurrentTenant(data: CreatePageInput) {
     const tenantId = this.getTenantId();
     return this.prisma.page.create({
       data: {
         organizationId: tenantId,
         slug: data.slug,
         title: data.title,
+        editorType: data.editorType ?? "tiptap",
         blocks: data.blocks ?? [],
+        htmlContent: data.htmlContent,
+        cssContent: data.cssContent,
+        gjsComponents: data.gjsComponents,
+        gjsStyles: data.gjsStyles,
+        templateId: data.templateId,
+        isLandingPage: data.isLandingPage ?? false,
       },
     });
   }
 
-  async updatePageById(
-    id: string,
-    data: { title?: string; blocks?: Prisma.InputJsonValue; published?: boolean }
-  ) {
+  async updatePageById(id: string, data: UpdatePageInput) {
     const tenantId = this.getTenantId();
     const page = await this.prisma.page.findUnique({ where: { id } });
 
@@ -136,7 +176,15 @@ export class PagesService {
 
     return this.prisma.page.update({
       where: { id },
-      data,
+      data: {
+        title: data.title,
+        published: data.published,
+        blocks: data.blocks,
+        htmlContent: data.htmlContent,
+        cssContent: data.cssContent,
+        gjsComponents: data.gjsComponents,
+        gjsStyles: data.gjsStyles,
+      },
     });
   }
 

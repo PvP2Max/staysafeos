@@ -18,41 +18,90 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@staysafeos/ui";
-import { createPage, deletePage, updatePage } from "@/lib/api/actions";
+import { createPage, createPageFromTemplate, deletePage, updatePage } from "@/lib/api/actions";
+import type { PageBuilderLevel } from "@/lib/stripe";
+import { defaultLandingPageTemplate, getTemplateWithBranding } from "@/lib/templates/landing-page";
 
 interface Page {
   id: string;
   slug: string;
   title: string;
   published: boolean;
+  editorType?: "tiptap" | "grapesjs";
+  isLandingPage?: boolean;
 }
 
 interface PagesManagerProps {
   pages: Page[];
+  pageBuilderLevel: PageBuilderLevel;
+  canCreateMultiplePages: boolean;
 }
 
-export function PagesManager({ pages: initialPages }: PagesManagerProps) {
+export function PagesManager({
+  pages: initialPages,
+  pageBuilderLevel,
+  canCreateMultiplePages,
+}: PagesManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [pages] = useState(initialPages);
   const [isCreating, setIsCreating] = useState(false);
   const [editingPage, setEditingPage] = useState<Page | null>(null);
   const [deletingPage, setDeletingPage] = useState<Page | null>(null);
-  const [newPage, setNewPage] = useState({ slug: "", title: "" });
+  const [newPage, setNewPage] = useState({
+    slug: "",
+    title: "",
+    editorType: pageBuilderLevel !== "none" ? "grapesjs" : "tiptap" as "tiptap" | "grapesjs",
+    isLandingPage: false,
+  });
   const [editTitle, setEditTitle] = useState("");
   const [message, setMessage] = useState("");
+
+  // Check if can create more pages
+  const hasLandingPage = pages.some((p) => p.isLandingPage);
+  const canCreatePage = canCreateMultiplePages || pages.length === 0 || (pageBuilderLevel !== "none" && !hasLandingPage);
 
   const handleCreate = () => {
     if (!newPage.slug || !newPage.title) return;
 
-    const formData = new FormData();
-    formData.set("slug", newPage.slug);
-    formData.set("title", newPage.title);
-
     startTransition(async () => {
       try {
-        await createPage(formData);
+        // For Growth tier landing pages, use the template
+        const isCreatingLandingPage =
+          pageBuilderLevel !== "none" &&
+          !hasLandingPage &&
+          newPage.editorType === "grapesjs";
+
+        if (isCreatingLandingPage && pageBuilderLevel === "template") {
+          // Growth tier: use pre-built template
+          const template = getTemplateWithBranding(defaultLandingPageTemplate);
+          await createPageFromTemplate(
+            newPage.slug,
+            newPage.title,
+            template.html,
+            template.css,
+            template.id,
+            true
+          );
+        } else {
+          // Pro/Enterprise or Tiptap: regular creation
+          const formData = new FormData();
+          formData.set("slug", newPage.slug);
+          formData.set("title", newPage.title);
+          formData.set("editorType", newPage.editorType);
+          formData.set(
+            "isLandingPage",
+            String(isCreatingLandingPage || newPage.isLandingPage)
+          );
+          await createPage(formData);
+        }
+
         setIsCreating(false);
-        setNewPage({ slug: "", title: "" });
+        setNewPage({
+          slug: "",
+          title: "",
+          editorType: pageBuilderLevel !== "none" ? "grapesjs" : "tiptap",
+          isLandingPage: false,
+        });
         setMessage("Page created successfully!");
       } catch {
         setMessage("Failed to create page");
@@ -111,8 +160,22 @@ export function PagesManager({ pages: initialPages }: PagesManagerProps) {
   return (
     <>
       <div className="flex justify-between items-center">
-        <div />
-        <Button onClick={() => setIsCreating(true)}>Create Page</Button>
+        <div>
+          {pageBuilderLevel === "none" && (
+            <p className="text-sm text-muted-foreground">
+              Upgrade to Growth or higher to access the visual page builder.
+            </p>
+          )}
+        </div>
+        <Button
+          onClick={() => setIsCreating(true)}
+          disabled={!canCreatePage}
+          title={!canCreatePage ? "Upgrade to Enterprise for multiple pages" : undefined}
+        >
+          {pageBuilderLevel !== "none" && !hasLandingPage
+            ? "Create Landing Page"
+            : "Create Page"}
+        </Button>
       </div>
 
       {message && (
@@ -142,6 +205,17 @@ export function PagesManager({ pages: initialPages }: PagesManagerProps) {
                       <p className="font-medium">{page.title}</p>
                       <Badge variant={page.published ? "default" : "secondary"}>
                         {page.published ? "Published" : "Draft"}
+                      </Badge>
+                      {page.isLandingPage && (
+                        <Badge variant="outline" className="text-xs">
+                          Landing Page
+                        </Badge>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        {page.editorType === "grapesjs" ? "Visual" : "Text"}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">/{page.slug}</p>
@@ -190,9 +264,17 @@ export function PagesManager({ pages: initialPages }: PagesManagerProps) {
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Page</DialogTitle>
+            <DialogTitle>
+              {pageBuilderLevel !== "none" && !hasLandingPage
+                ? "Create Landing Page"
+                : "Create Page"}
+            </DialogTitle>
             <DialogDescription>
-              Create a new public page for your organization
+              {pageBuilderLevel === "template" && !hasLandingPage
+                ? "Create your organization's landing page. You'll start with a professional template that you can customize with your own text and images."
+                : pageBuilderLevel === "full" && !hasLandingPage
+                ? "Create your organization's landing page with the full visual page builder."
+                : "Create a new public page for your organization"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -200,9 +282,11 @@ export function PagesManager({ pages: initialPages }: PagesManagerProps) {
               <Label htmlFor="slug">URL Slug</Label>
               <Input
                 id="slug"
-                placeholder="about-us"
+                placeholder={pageBuilderLevel !== "none" && !hasLandingPage ? "home" : "about-us"}
                 value={newPage.slug}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPage({ ...newPage, slug: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewPage({ ...newPage, slug: e.target.value })
+                }
               />
               <p className="text-xs text-muted-foreground">
                 This will be the URL path: /pages/{newPage.slug || "your-slug"}
@@ -212,17 +296,70 @@ export function PagesManager({ pages: initialPages }: PagesManagerProps) {
               <Label htmlFor="title">Page Title</Label>
               <Input
                 id="title"
-                placeholder="About Us"
+                placeholder={pageBuilderLevel !== "none" && !hasLandingPage ? "Home" : "About Us"}
                 value={newPage.title}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPage({ ...newPage, title: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewPage({ ...newPage, title: e.target.value })
+                }
               />
             </div>
+
+            {/* Editor type selection - only show if page builder is available */}
+            {pageBuilderLevel !== "none" && (
+              <div className="space-y-2">
+                <Label>Editor Type</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={newPage.editorType === "grapesjs" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewPage({ ...newPage, editorType: "grapesjs" })}
+                  >
+                    Visual Editor
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={newPage.editorType === "tiptap" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewPage({ ...newPage, editorType: "tiptap" })}
+                  >
+                    Text Editor
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {newPage.editorType === "grapesjs"
+                    ? "Drag-and-drop page builder for creating rich landing pages"
+                    : "Simple text editor for content pages"}
+                </p>
+              </div>
+            )}
+
+            {/* Landing page checkbox for non-landing pages when builder available */}
+            {pageBuilderLevel !== "none" && hasLandingPage && canCreateMultiplePages && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isLandingPage"
+                  checked={newPage.isLandingPage}
+                  onChange={(e) =>
+                    setNewPage({ ...newPage, isLandingPage: e.target.checked })
+                  }
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="isLandingPage" className="text-sm font-normal">
+                  Set as landing page (replaces current)
+                </Label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreating(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={isPending || !newPage.slug || !newPage.title}>
+            <Button
+              onClick={handleCreate}
+              disabled={isPending || !newPage.slug || !newPage.title}
+            >
               {isPending ? "Creating..." : "Create"}
             </Button>
           </DialogFooter>

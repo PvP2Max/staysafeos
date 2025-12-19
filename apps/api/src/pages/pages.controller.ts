@@ -8,8 +8,7 @@ import {
   Body,
   UseGuards,
 } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
-import { PagesService } from "./pages.service";
+import { PagesService, CreatePageInput, UpdatePageInput } from "./pages.service";
 import { LogtoAuthGuard, Public, Roles } from "../auth/logto-auth.guard";
 
 @Controller("pages")
@@ -30,9 +29,7 @@ export class PagesController {
   @Post()
   @UseGuards(LogtoAuthGuard)
   @Roles("EXECUTIVE", "ADMIN")
-  async createPageForTenant(
-    @Body() data: { slug: string; title: string; blocks?: Prisma.InputJsonValue }
-  ) {
+  async createPageForTenant(@Body() data: CreatePageInput) {
     return this.pagesService.createPageForCurrentTenant(data);
   }
 
@@ -50,10 +47,7 @@ export class PagesController {
   @Patch(":id")
   @UseGuards(LogtoAuthGuard)
   @Roles("EXECUTIVE", "ADMIN")
-  async updatePageById(
-    @Param("id") id: string,
-    @Body() data: { title?: string; blocks?: Prisma.InputJsonValue; published?: boolean }
-  ) {
+  async updatePageById(@Param("id") id: string, @Body() data: UpdatePageInput) {
     return this.pagesService.updatePageById(id, data);
   }
 

@@ -39,6 +39,9 @@ export default async function DashboardLayout({
               <Link href="/dashboard/pages" className="text-muted-foreground hover:text-foreground">
                 Pages
               </Link>
+              <Link href="/dashboard/domains" className="text-muted-foreground hover:text-foreground">
+                Domains
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
