@@ -1,5 +1,26 @@
-import { createApiClient } from "@/lib/api/client";
+import { headers } from "next/headers";
 import { PagesManager } from "./pages-manager";
+
+async function fetchPages() {
+  // Get the host from headers for internal API call
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+
+  // Forward cookies for authentication
+  const cookie = headersList.get("cookie") || "";
+
+  const response = await fetch(`${protocol}://${host}/api/pages`, {
+    headers: { cookie },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  return response.json();
+}
 
 export default async function PagesPage() {
   let pages: Array<{
@@ -10,8 +31,7 @@ export default async function PagesPage() {
   }> = [];
 
   try {
-    const api = await createApiClient();
-    pages = await api.getPages();
+    pages = await fetchPages();
   } catch {
     // Use empty list if API fails
   }
