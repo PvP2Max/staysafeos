@@ -10,17 +10,26 @@ function getApiBaseUrl() {
 }
 
 /**
- * Get the organization ID from Logto context
+ * Get the organization ID from API (database ID, not Logto ID)
  */
-async function getOrganizationId(): Promise<string | undefined> {
+async function getOrganizationId(accessToken: string): Promise<string | undefined> {
   try {
-    const config = getLogtoConfig();
-    const { claims } = await getLogtoContext(config);
-    const organizations = claims?.organizations as string[] | undefined;
-    return organizations?.[0];
+    const response = await fetch(`${getApiBaseUrl()}/v1/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const me = await response.json();
+      const ownedTenants = me.ownedTenants as Array<{ id: string }> | undefined;
+      const membership = me.membership as { tenantId: string } | undefined;
+      return ownedTenants?.[0]?.id || membership?.tenantId;
+    }
   } catch {
-    return undefined;
+    // Fall through
   }
+  return undefined;
 }
 
 /**
@@ -38,7 +47,6 @@ export async function GET() {
     }
 
     const accessToken = await getApiAccessToken();
-    const organizationId = await getOrganizationId();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -46,6 +54,8 @@ export async function GET() {
         { status: 503 }
       );
     }
+
+    const organizationId = await getOrganizationId(accessToken);
 
     // Build headers
     const headers: HeadersInit = {

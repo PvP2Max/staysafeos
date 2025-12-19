@@ -289,7 +289,7 @@ export class ApiClient {
  */
 export async function createApiClient(): Promise<ApiClient> {
   const config = getLogtoConfig();
-  const { isAuthenticated, claims } = await getLogtoContext(config);
+  const { isAuthenticated } = await getLogtoContext(config);
 
   if (!isAuthenticated) {
     throw new Error("Not authenticated");
@@ -301,9 +301,26 @@ export async function createApiClient(): Promise<ApiClient> {
     throw new Error("Could not get API access token");
   }
 
-  // Get tenant ID from organization claims or context
-  const organizations = claims?.organizations as string[] | undefined;
-  const tenantId = organizations?.[0];
+  // Get the user's organizations from the API to get the database org ID
+  // (Logto org IDs don't match database IDs, so we need to fetch the real ones)
+  let tenantId: string | undefined;
+  try {
+    const response = await fetch(`${API_BASE_URL}/v1/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const me = await response.json();
+      // Use the first owned tenant's ID, or fall back to membership's tenant
+      const ownedTenants = me.ownedTenants as Array<{ id: string }> | undefined;
+      const membership = me.membership as { tenantId: string } | undefined;
+      tenantId = ownedTenants?.[0]?.id || membership?.tenantId;
+    }
+  } catch {
+    // If we can't fetch, proceed without tenant context
+  }
 
   return new ApiClient(accessToken, tenantId);
 }
