@@ -147,12 +147,13 @@ export class LogtoAuthGuard implements CanActivate {
     const tenantSlug = this.requestContext.tenantSlug;
     if (!tenantSlug) return;
 
-    // Load membership for this tenant (support both slug and ID)
+    // Load membership for this tenant (support slug, database ID, or Logto org ID)
     const membership = await this.prisma.membership.findFirst({
       where: {
         accountId: account.id,
         OR: [
           { organization: { slug: tenantSlug } },
+          { organization: { logtoOrgId: tenantSlug } },
           { organizationId: tenantSlug },
         ],
       },
