@@ -6,6 +6,19 @@ export const dynamic = "force-dynamic";
 
 const API_URL = process.env.API_URL || "https://api.staysafeos.com";
 
+async function getUserTenantSlug(accessToken: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_URL}/v1/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.ownedTenants?.[0]?.slug || data.memberships?.[0]?.organization?.slug || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { isAuthenticated } = await getLogtoContext(getLogtoConfig());
@@ -24,10 +37,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No access token" }, { status: 401 });
     }
 
+    // Get user's tenant slug for organization context
+    const tenantSlug = await getUserTenantSlug(accessToken);
+    if (!tenantSlug) {
+      return NextResponse.json({ error: "No organization found" }, { status: 400 });
+    }
+
     const response = await fetch(`${API_URL}/v1/domains/debug/register-logto/${domain}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        "X-StaySafe-Tenant": tenantSlug,
       },
     });
 
