@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
     }
 
     const priceId = PRICE_IDS[planId];
+    console.log("[checkout] planId:", planId);
+    console.log("[checkout] priceId:", priceId);
+    console.log("[checkout] STRIPE_SECRET_KEY prefix:", process.env.STRIPE_SECRET_KEY?.substring(0, 12));
+
     if (!priceId) {
       return NextResponse.json(
         { message: "Invalid plan selected" },
