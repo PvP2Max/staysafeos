@@ -186,6 +186,45 @@ export class TenantsService {
   }
 
   /**
+   * Get current user's tenant with branding/theme data flattened
+   */
+  async getCurrentTenantWithBranding(accountId: string) {
+    const org = await this.prisma.organization.findFirst({
+      where: { ownerAccountId: accountId },
+      include: {
+        theme: true,
+        settings: true,
+      },
+    });
+
+    if (!org) {
+      throw new NotFoundException("No organization found for this account");
+    }
+
+    // Flatten theme data into response
+    return {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      subscriptionTier: org.subscriptionTier,
+      logoUrl: org.theme?.logoUrl || null,
+      faviconUrl: org.theme?.faviconUrl || null,
+      primaryColor: org.theme?.primaryColor || null,
+      secondaryColor: org.theme?.backgroundColor || null,
+      tertiaryColor: org.theme?.mutedColor || null,
+      features: {
+        rideRequests: org.settings?.dispatcherEnabled ?? true,
+        walkOns: org.settings?.driverEnabled ?? true,
+        tcTransfers: org.settings?.safetyEnabled ?? true,
+        training: true,
+        shifts: true,
+        analytics: true,
+        supportCodes: true,
+      },
+    };
+  }
+
+  /**
    * Update current user's tenant branding/theme
    */
   async updateCurrentTenantBranding(

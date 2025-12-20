@@ -53,6 +53,20 @@ export class TenantsController {
   }
 
   /**
+   * Get current user's tenant with branding/theme data
+   * Uses the first owned tenant of the authenticated user
+   */
+  @Get("current")
+  async getCurrentTenant() {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    return this.tenantsService.getCurrentTenantWithBranding(accountId);
+  }
+
+  /**
    * Update current user's tenant branding/theme
    * Uses the first owned tenant of the authenticated user
    */
