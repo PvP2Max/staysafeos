@@ -81,4 +81,12 @@ export class AccountsController {
   async getProfileCompletion() {
     return this.accountsService.getProfileCompletion();
   }
+
+  /**
+   * Debug endpoint - returns full auth context for troubleshooting
+   */
+  @Get("debug")
+  async getDebugInfo() {
+    return this.accountsService.getDebugInfo();
+  }
 }

@@ -51,6 +51,64 @@ export class AccountsService {
   }
 
   /**
+   * Debug endpoint - returns full context for troubleshooting auth issues
+   */
+  async getDebugInfo() {
+    const store = this.requestContext.store;
+    const accountId = store?.accountId;
+
+    // Get all memberships for this account
+    let allMemberships: Array<{ orgSlug: string; orgId: string; role: string }> = [];
+    if (accountId) {
+      const memberships = await this.prisma.membership.findMany({
+        where: { accountId },
+        include: {
+          organization: {
+            select: { slug: true, id: true, name: true },
+          },
+        },
+      });
+      allMemberships = memberships.map((m) => ({
+        orgSlug: m.organization.slug,
+        orgId: m.organization.id,
+        orgName: m.organization.name,
+        role: m.role,
+        status: m.status,
+      }));
+    }
+
+    // Get owned orgs
+    let ownedOrgs: Array<{ slug: string; id: string; name: string }> = [];
+    if (accountId) {
+      const orgs = await this.prisma.organization.findMany({
+        where: { ownerAccountId: accountId },
+        select: { slug: true, id: true, name: true },
+      });
+      ownedOrgs = orgs;
+    }
+
+    return {
+      context: {
+        accountId: store?.accountId || null,
+        account: store?.account || null,
+        tenantSlug: store?.tenantSlug || null,
+        organizationId: store?.organizationId || null,
+        organization: store?.organization || null,
+        membership: store?.membership || null,
+      },
+      allMemberships,
+      ownedOrgs,
+      diagnosis: {
+        hasAccount: !!store?.accountId,
+        hasTenantSlug: !!store?.tenantSlug,
+        hasMembership: !!store?.membership,
+        membershipCount: allMemberships.length,
+        ownedOrgCount: ownedOrgs.length,
+      },
+    };
+  }
+
+  /**
    * Update current user's profile
    */
   async updateProfile(data: {
