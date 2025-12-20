@@ -4,6 +4,7 @@ import { getLogtoConfig } from "@/lib/logto";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@staysafeos/ui";
 import Link from "next/link";
+import { headers } from "next/headers";
 
 interface TenantInfo {
   id: string;
@@ -49,7 +50,11 @@ async function getLandingPage(slug: string): Promise<LandingPage | null> {
   }
 }
 
-export default async function AppIndexPage() {
+export default async function AppIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   // Get dynamic config based on current host
   const logtoConfig = await getLogtoConfig();
 
@@ -60,11 +65,11 @@ export default async function AppIndexPage() {
     redirect("/dashboard");
   }
 
-  // Get tenant from subdomain
+  // Get tenant from subdomain or custom domain
   const tenantSlug = await getTenantFromRequest();
 
   if (!tenantSlug) {
-    // No tenant subdomain - show generic page
+    // No tenant context - show generic page
     return <SimpleSignInPage />;
   }
 
@@ -75,6 +80,28 @@ export default async function AppIndexPage() {
     redirect("/partner-not-found");
   }
 
+  // Check if we should auto-redirect to Logto for SSO
+  // Skip if user explicitly wants to see landing page (?landing=true)
+  // or if auto-signin already attempted (?sso=attempted)
+  const params = await searchParams;
+  const showLanding = params.landing === "true";
+  const ssoAttempted = params.sso === "attempted";
+
+  // For custom domains or when coming from another StaySafeOS domain,
+  // auto-redirect through Logto to establish session
+  if (!showLanding && !ssoAttempted) {
+    // Check if user might already be logged in elsewhere by redirecting through Logto
+    // The ?sso=attempted prevents infinite loops
+    const headersList = await headers();
+    const referer = headersList.get("referer") || "";
+    const isFromStaySafeOS = referer.includes("staysafeos.com");
+
+    // Auto-SSO if coming from another StaySafeOS domain
+    if (isFromStaySafeOS) {
+      redirect("/api/auth/signin?sso=auto");
+    }
+  }
+
   // Check if tier supports custom pages
   const tierHasPages = ["growth", "pro", "enterprise"].includes(tenant.subscriptionTier);
 
@@ -82,7 +109,7 @@ export default async function AppIndexPage() {
     // Try to get custom landing page
     const page = await getLandingPage(tenantSlug);
     if (page?.published && page.htmlContent) {
-      return <LandingPageRenderer page={page} />;
+      return <LandingPageRenderer page={page} tenant={tenant} />;
     }
   }
 
@@ -147,13 +174,25 @@ function SimpleSignInPage({ tenant }: { tenant?: TenantInfo }) {
   );
 }
 
-function LandingPageRenderer({ page }: { page: LandingPage }) {
+function LandingPageRenderer({ page, tenant }: { page: LandingPage; tenant: TenantInfo }) {
   return (
     <>
       {page.cssContent && (
         <style dangerouslySetInnerHTML={{ __html: page.cssContent }} />
       )}
       <div dangerouslySetInnerHTML={{ __html: page.htmlContent || "" }} />
+      {/* Hidden sign-in form for landing pages */}
+      <form
+        id="staysafeos-signin"
+        action={async () => {
+          "use server";
+          const config = await getLogtoConfig();
+          await signIn(config);
+        }}
+        style={{ display: "none" }}
+      >
+        <button type="submit">Sign In</button>
+      </form>
     </>
   );
 }
