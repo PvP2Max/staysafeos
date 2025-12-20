@@ -5,6 +5,7 @@ import { CreateTenantDto } from "./dto/create-tenant.dto";
 import { GlobalStatsService } from "../global-stats/global-stats.service";
 import { LogtoManagementService } from "../auth/logto-management.service";
 import { RenderManagementService } from "../auth/render-management.service";
+import { getTemplateWithBranding } from "./templates/landing-page";
 
 // Reserved subdomains that cannot be used as tenant slugs
 const RESERVED_SLUGS = [
@@ -295,6 +296,7 @@ export class TenantsService {
 
   /**
    * Update subscription data (for webhook)
+   * Also handles dynamic page creation/hiding on tier changes
    */
   async updateSubscription(
     id: string,
@@ -305,7 +307,17 @@ export class TenantsService {
       stripeSubscriptionId?: string | null;
     }
   ) {
-    return this.prisma.organization.update({
+    // Get current tier before updating
+    const org = await this.prisma.organization.findUnique({
+      where: { id },
+      select: { subscriptionTier: true },
+    });
+
+    const oldTier = org?.subscriptionTier || "free";
+    const newTier = data.subscriptionTier;
+
+    // Update the subscription
+    const updated = await this.prisma.organization.update({
       where: { id },
       data: {
         ...(data.subscriptionTier && { subscriptionTier: data.subscriptionTier }),
@@ -323,6 +335,80 @@ export class TenantsService {
         stripeSubscriptionId: true,
       },
     });
+
+    // Handle page visibility changes if tier changed
+    if (newTier && oldTier !== newTier) {
+      await this.handleTierChange(id, oldTier, newTier);
+    }
+
+    return updated;
+  }
+
+  /**
+   * Handle dynamic page creation/hiding on tier changes
+   */
+  private async handleTierChange(orgId: string, oldTier: string, newTier: string) {
+    const tierHasPages = (tier: string) => ["growth", "pro", "enterprise"].includes(tier);
+
+    const hadPages = tierHasPages(oldTier);
+    const hasPages = tierHasPages(newTier);
+
+    if (!hadPages && hasPages) {
+      // UPGRADE: Create default landing page if none exists
+      await this.createDefaultLandingPage(orgId);
+      console.log(`[tenants] Created/restored landing page for org ${orgId} on upgrade to ${newTier}`);
+    } else if (hadPages && !hasPages) {
+      // DOWNGRADE: Soft-delete (unpublish) all pages
+      await this.prisma.page.updateMany({
+        where: { organizationId: orgId },
+        data: { published: false },
+      });
+      console.log(`[tenants] Unpublished pages for org ${orgId} on downgrade to ${newTier}`);
+    }
+  }
+
+  /**
+   * Create or restore the default landing page for an organization
+   */
+  private async createDefaultLandingPage(orgId: string) {
+    const existing = await this.prisma.page.findFirst({
+      where: { organizationId: orgId, slug: "home" },
+    });
+
+    if (!existing) {
+      // Create from template
+      const org = await this.prisma.organization.findUnique({
+        where: { id: orgId },
+        include: { theme: true },
+      });
+
+      if (!org) return;
+
+      const template = getTemplateWithBranding(
+        org.name,
+        org.theme?.logoUrl,
+        org.theme?.primaryColor
+      );
+
+      await this.prisma.page.create({
+        data: {
+          organizationId: orgId,
+          slug: "home",
+          title: "Home",
+          editorType: "grapesjs",
+          htmlContent: template.html,
+          cssContent: template.css,
+          isLandingPage: true,
+          published: true,
+        },
+      });
+    } else if (!existing.published) {
+      // Re-publish existing page (was soft-deleted on downgrade)
+      await this.prisma.page.update({
+        where: { id: existing.id },
+        data: { published: true },
+      });
+    }
   }
 
   /**

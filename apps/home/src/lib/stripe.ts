@@ -99,7 +99,7 @@ export const PLAN_LIMITS: Record<string, {
       "email_support",
     ],
     pageBuilderLevel: "full",
-    canEditFooter: false,
+    canEditFooter: true,
     canCreateMultiplePages: false,
   },
   enterprise: {
