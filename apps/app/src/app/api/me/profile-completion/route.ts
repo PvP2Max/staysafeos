@@ -1,6 +1,6 @@
 import { getLogtoContext } from "@logto/next/server-actions";
 import { NextResponse } from "next/server";
-import { getLogtoConfig } from "@/lib/logto";
+import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 import { getTenantFromRequest } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +10,15 @@ const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
 export async function GET() {
   try {
     const logtoConfig = await getLogtoConfig();
-    const { isAuthenticated, accessToken } = await getLogtoContext(logtoConfig);
+    const { isAuthenticated } = await getLogtoContext(logtoConfig);
 
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const accessToken = await getApiAccessToken();
+    if (!accessToken) {
+      return NextResponse.json({ error: "Could not get API access token" }, { status: 401 });
     }
 
     const tenantId = await getTenantFromRequest();

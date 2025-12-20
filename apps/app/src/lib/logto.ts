@@ -1,4 +1,5 @@
 import { LogtoNextConfig } from "@logto/next";
+import { getAccessToken } from "@logto/next/server-actions";
 import { headers } from "next/headers";
 
 // Use placeholder values during build, actual values at runtime
@@ -34,6 +35,27 @@ export async function getLogtoConfig(): Promise<LogtoNextConfig> {
     ...logtoConfig,
     baseUrl,
   };
+}
+
+/**
+ * Get an access token for the API resource.
+ * Returns undefined if no API resource is configured or token fetch fails.
+ */
+export async function getApiAccessToken(): Promise<string | undefined> {
+  const apiResource = process.env.LOGTO_API_RESOURCE;
+  if (!apiResource) {
+    console.warn("[logto] LOGTO_API_RESOURCE not configured");
+    return undefined;
+  }
+
+  try {
+    const config = await getLogtoConfig();
+    const token = await getAccessToken(config, apiResource);
+    return token;
+  } catch (error) {
+    console.error("[logto] Failed to get API access token:", error);
+    return undefined;
+  }
 }
 
 // Validate at runtime (not build time)

@@ -1,6 +1,6 @@
 import { getLogtoContext } from "@logto/next/server-actions";
 import { NextResponse } from "next/server";
-import { getLogtoConfig } from "@/lib/logto";
+import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { headers } from "next/headers";
 
@@ -15,7 +15,19 @@ export async function GET() {
     const tenantSlug = await getTenantFromRequest();
 
     const logtoConfig = await getLogtoConfig();
-    const { isAuthenticated, accessToken, claims } = await getLogtoContext(logtoConfig);
+    const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
+
+    // Try to get access token for API resource
+    let accessToken: string | undefined;
+    let tokenError: string | undefined;
+    try {
+      accessToken = await getApiAccessToken();
+      if (!accessToken) {
+        tokenError = "getApiAccessToken returned undefined (likely LOGTO_API_RESOURCE not set or token fetch failed)";
+      }
+    } catch (err) {
+      tokenError = `Token fetch error: ${String(err)}`;
+    }
 
     // Always return debug info, even if not authenticated
     const debugInfo: Record<string, unknown> = {
@@ -24,17 +36,28 @@ export async function GET() {
         tenantSlugFromSubdomain: tenantSlug,
         apiUrl: API_BASE_URL,
         isAuthenticated,
+        hasAccessToken: !!accessToken,
         logtoEndpoint: process.env.LOGTO_ENDPOINT,
+        logtoApiResource: process.env.LOGTO_API_RESOURCE || "(not set)",
         userEmail: claims?.email || null,
         userId: claims?.sub || null,
       },
     };
 
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       return NextResponse.json({
         ...debugInfo,
         error: "Not authenticated on this subdomain",
         hint: "You need to log in on this subdomain. Try visiting the home page first.",
+      });
+    }
+
+    if (!accessToken) {
+      return NextResponse.json({
+        ...debugInfo,
+        error: "Authenticated but no API access token",
+        tokenError,
+        hint: "Check that LOGTO_API_RESOURCE is configured and that the user's session has permission for it.",
       });
     }
 

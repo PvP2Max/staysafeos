@@ -3,7 +3,7 @@
  */
 
 import { getLogtoContext } from "@logto/next/server-actions";
-import { getLogtoConfig } from "@/lib/logto";
+import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 import { getTenantFromRequest } from "@/lib/tenant";
 import type { Ride, Van, AnalyticsSummary, TrainingModule, TrainingProgress, Shift, VanTransfer, VanTask, Membership } from "./types";
 
@@ -419,10 +419,16 @@ export class ApiClient {
  */
 export async function createApiClient(): Promise<ApiClient> {
   const logtoConfig = await getLogtoConfig();
-  const { isAuthenticated, accessToken } = await getLogtoContext(logtoConfig);
+  const { isAuthenticated } = await getLogtoContext(logtoConfig);
 
-  if (!isAuthenticated || !accessToken) {
+  if (!isAuthenticated) {
     throw new Error("Not authenticated");
+  }
+
+  // Get access token for API resource
+  const accessToken = await getApiAccessToken();
+  if (!accessToken) {
+    throw new Error("Could not get API access token");
   }
 
   // Get tenant from subdomain (e.g., wainwright.staysafeos.com -> wainwright)
