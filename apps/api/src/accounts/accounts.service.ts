@@ -81,4 +81,48 @@ export class AccountsService {
 
     return this.getMe();
   }
+
+  /**
+   * Check if current user is on-shift for any roles
+   * Returns which roles they are currently on-shift for
+   */
+  async getOnShiftStatus() {
+    const store = this.requestContext.store;
+    const membershipId = store?.membership?.id;
+
+    if (!membershipId) {
+      return { onShift: false, roles: {} };
+    }
+
+    const now = new Date();
+
+    // Find all active shift signups for this user
+    const activeSignups = await this.prisma.shiftSignup.findMany({
+      where: {
+        membershipId,
+        status: "CONFIRMED",
+        shift: {
+          startTime: { lte: now },
+          endTime: { gte: now },
+        },
+      },
+      include: {
+        shift: {
+          select: { role: true },
+        },
+      },
+    });
+
+    // Build roles map
+    const roles: Record<string, boolean> = {};
+    for (const signup of activeSignups) {
+      roles[signup.shift.role] = true;
+    }
+
+    return {
+      onShift: activeSignups.length > 0,
+      roles,
+      activeShiftCount: activeSignups.length,
+    };
+  }
 }

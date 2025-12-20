@@ -298,6 +298,58 @@ export class ApiClient {
       role: string | null;
     }>("/v1/me/membership-status");
   }
+
+  // On-shift status
+  async getOnShiftStatus() {
+    return this.fetch<{
+      onShift: boolean;
+      roles: Record<string, boolean>;
+      activeShiftCount: number;
+    }>("/v1/me/on-shift");
+  }
+
+  // Members management
+  async getMembers(params?: { search?: string; role?: string }) {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set("search", params.search);
+    if (params?.role) searchParams.set("role", params.role);
+    const query = searchParams.toString();
+    return this.fetch<{ data: Membership[]; total: number }>(
+      `/v1/tenants/current/members${query ? `?${query}` : ""}`
+    );
+  }
+
+  async updateMemberRole(membershipId: string, role: string) {
+    return this.fetch<Membership>(`/v1/tenants/current/members/${membershipId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async removeMember(membershipId: string) {
+    return this.fetch<void>(`/v1/tenants/current/members/${membershipId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Current user profile
+  async getMe() {
+    return this.fetch<{
+      account: {
+        id: string;
+        email: string;
+        firstName?: string;
+        lastName?: string;
+      };
+      membership: Membership | null;
+      ownedTenants: Array<{
+        id: string;
+        slug: string;
+        name: string;
+        subscriptionTier: string;
+      }>;
+    }>("/v1/me");
+  }
 }
 
 /**

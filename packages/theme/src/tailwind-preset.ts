@@ -101,6 +101,34 @@ export const staysafeosPreset: Partial<Config> = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        "sidebar-slide-in": {
+          from: { transform: "translateX(-100%)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
+        },
+        "sidebar-slide-out": {
+          from: { transform: "translateX(0)", opacity: "1" },
+          to: { transform: "translateX(-100%)", opacity: "0" },
+        },
+        "content-fade-in": {
+          from: { opacity: "0", transform: "scale(0.98)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        "overlay-fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "overlay-fade-out": {
+          from: { opacity: "1" },
+          to: { opacity: "0" },
+        },
+        "collapse-expand": {
+          from: { width: "var(--sidebar-collapsed-width)" },
+          to: { width: "var(--sidebar-expanded-width)" },
+        },
+        "collapse-shrink": {
+          from: { width: "var(--sidebar-expanded-width)" },
+          to: { width: "var(--sidebar-collapsed-width)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -113,6 +141,11 @@ export const staysafeosPreset: Partial<Config> = {
         "slide-in-from-right": "slide-in-from-right 0.3s ease-out",
         "spin-slow": "spin-slow 3s linear infinite",
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "sidebar-slide-in": "sidebar-slide-in 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
+        "sidebar-slide-out": "sidebar-slide-out 0.25s cubic-bezier(0.32, 0.72, 0, 1)",
+        "content-fade-in": "content-fade-in 0.2s cubic-bezier(0.32, 0.72, 0, 1)",
+        "overlay-fade-in": "overlay-fade-in 0.2s ease-out",
+        "overlay-fade-out": "overlay-fade-out 0.15s ease-in",
       },
     },
   },

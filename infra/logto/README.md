@@ -191,11 +191,13 @@ Go to: `https://admin-auth.staysafeos.com`
 ### StaySafeOS App (Multi-tenant)
 
 - **Type:** Traditional Web → Next.js (App Router)
-- **Redirect URIs:**
-  - `https://*.staysafeos.com/callback` (if wildcards supported)
-  - Or add specific ones as needed
-- **Post sign-out redirects:**
-  - `https://*.staysafeos.com`
+- **Redirect URIs:** Automatically managed by the API when tenants are created
+- **Post sign-out redirects:** Automatically managed by the API
+
+Note: The API automatically registers redirect URIs when:
+- A new tenant is created (adds `https://{slug}.staysafeos.com/callback`)
+- A custom domain is verified (adds `https://{domain}/callback`)
+- A tenant/domain is deleted (removes the corresponding URIs)
 
 ### API Resource
 
@@ -242,11 +244,17 @@ For **staysafeos-api**:
 - `LOGTO_M2M_APP_ID`: (from M2M app created in Step 8)
 - `LOGTO_M2M_APP_SECRET`: (from M2M app created in Step 8)
 - `LOGTO_APP_APPLICATION_ID`: (Application ID of StaySafeOS App - the user-facing app)
+- `RENDER_API_KEY`: (from Render Dashboard → Account Settings → API Keys)
+- `RENDER_APP_SERVICE_ID`: (App service ID, e.g., `srv-xxxxx` from service URL)
 
-The M2M credentials enable automatic redirect URI management:
-- When a new tenant is created, the subdomain callback is automatically registered
-- When a custom domain is verified, its callback is automatically registered
-- When a custom domain is deleted, its callback is automatically removed
+The M2M and Render API credentials enable automatic management:
+- When a new tenant is created, the subdomain callback is automatically registered in Logto
+- When a custom domain is verified:
+  - Its callback is automatically registered in Logto
+  - The domain is automatically added to Render's App service
+- When a custom domain or tenant is deleted:
+  - Callbacks are automatically removed from Logto
+  - Custom domains are automatically removed from Render
 
 ## Maintenance
 

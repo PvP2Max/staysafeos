@@ -4,6 +4,7 @@ import { RequestContextService } from "../common/context/request-context.service
 import { CreateTenantDto } from "./dto/create-tenant.dto";
 import { GlobalStatsService } from "../global-stats/global-stats.service";
 import { LogtoManagementService } from "../auth/logto-management.service";
+import { RenderManagementService } from "../auth/render-management.service";
 
 // Reserved subdomains that cannot be used as tenant slugs
 const RESERVED_SLUGS = [
@@ -37,7 +38,8 @@ export class TenantsService {
     private readonly prisma: PrismaService,
     private readonly requestContext: RequestContextService,
     private readonly globalStatsService: GlobalStatsService,
-    private readonly logtoManagement: LogtoManagementService
+    private readonly logtoManagement: LogtoManagementService,
+    private readonly renderManagement: RenderManagementService
   ) {}
 
   /**
@@ -360,6 +362,11 @@ export class TenantsService {
     for (const domain of org.domains) {
       this.logtoManagement.removeCustomDomainRedirectUris(domain.domain).catch((error) => {
         console.error(`[tenants] Failed to remove Logto redirect URIs for ${domain.domain}:`, error);
+      });
+
+      // Also remove custom domain from Render
+      this.renderManagement.removeCustomDomain(domain.domain).catch((error) => {
+        console.error(`[tenants] Failed to remove Render domain for ${domain.domain}:`, error);
       });
     }
 

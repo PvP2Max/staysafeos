@@ -9,6 +9,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 import { DnsVerificationService } from "./dns-verification.service";
 import { LogtoManagementService } from "../auth/logto-management.service";
+import { RenderManagementService } from "../auth/render-management.service";
 import { randomBytes } from "crypto";
 
 export interface CreateDomainInput {
@@ -37,7 +38,8 @@ export class DomainsService {
     private readonly prisma: PrismaService,
     private readonly requestContext: RequestContextService,
     private readonly dnsVerification: DnsVerificationService,
-    private readonly logtoManagement: LogtoManagementService
+    private readonly logtoManagement: LogtoManagementService,
+    private readonly renderManagement: RenderManagementService
   ) {}
 
   private getTenantId(): string {
@@ -170,6 +172,11 @@ export class DomainsService {
       console.error(`[domains] Failed to register Logto redirect URIs for ${domain.domain}:`, error);
     });
 
+    // Add custom domain to Render App service (non-blocking)
+    this.renderManagement.addCustomDomain(domain.domain).catch((error) => {
+      console.error(`[domains] Failed to add domain to Render for ${domain.domain}:`, error);
+    });
+
     return this.toDomainWithDnsRecords(updatedDomain);
   }
 
@@ -222,10 +229,14 @@ export class DomainsService {
 
     await this.prisma.domain.delete({ where: { id } });
 
-    // Remove redirect URIs from Logto if domain was verified (non-blocking)
+    // Remove redirect URIs from Logto and domain from Render if domain was verified (non-blocking)
     if (domain.verifiedAt) {
       this.logtoManagement.removeCustomDomainRedirectUris(domain.domain).catch((error) => {
         console.error(`[domains] Failed to remove Logto redirect URIs for ${domain.domain}:`, error);
+      });
+
+      this.renderManagement.removeCustomDomain(domain.domain).catch((error) => {
+        console.error(`[domains] Failed to remove domain from Render for ${domain.domain}:`, error);
       });
     }
   }

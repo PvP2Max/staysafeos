@@ -45,4 +45,12 @@ export class AccountsController {
   async updateProfile(@Body() dto: UpdateProfileDto) {
     return this.accountsService.updateProfile(dto);
   }
+
+  /**
+   * Check if current user is on-shift
+   */
+  @Get("on-shift")
+  async getOnShiftStatus() {
+    return this.accountsService.getOnShiftStatus();
+  }
 }
