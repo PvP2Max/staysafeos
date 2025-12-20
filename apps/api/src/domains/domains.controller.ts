@@ -11,10 +11,14 @@ import {
 } from "@nestjs/common";
 import { DomainsService, CreateDomainInput } from "./domains.service";
 import { LogtoAuthGuard, Public, Roles } from "../auth/logto-auth.guard";
+import { LogtoManagementService } from "../auth/logto-management.service";
 
 @Controller("domains")
 export class DomainsController {
-  constructor(private readonly domainsService: DomainsService) {}
+  constructor(
+    private readonly domainsService: DomainsService,
+    private readonly logtoManagement: LogtoManagementService
+  ) {}
 
   /**
    * Get all domains for current tenant
@@ -90,6 +94,59 @@ export class DomainsController {
     return {
       found: true,
       organizationSlug: result.organization.slug,
+    };
+  }
+
+  /**
+   * Debug endpoint to check Logto Management service status
+   * and manually trigger redirect URI registration
+   */
+  @Post("debug/register-logto/:domain")
+  @UseGuards(LogtoAuthGuard)
+  @Roles("EXECUTIVE", "ADMIN")
+  async debugRegisterLogto(@Param("domain") domain: string) {
+    const isEnabled = this.logtoManagement.isEnabled();
+
+    if (!isEnabled) {
+      return {
+        success: false,
+        error: "Logto Management service is disabled",
+        hint: "Set LOGTO_M2M_APP_ID, LOGTO_M2M_APP_SECRET, and LOGTO_APP_APPLICATION_ID in API environment",
+      };
+    }
+
+    try {
+      const result = await this.logtoManagement.addCustomDomainRedirectUris(domain);
+      return {
+        success: result,
+        message: result
+          ? `Successfully registered redirect URIs for ${domain}`
+          : `Failed to register redirect URIs for ${domain}`,
+        callbackUri: `https://${domain}/callback`,
+        logoutUri: `https://${domain}`,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Check Logto Management service configuration status
+   */
+  @Get("debug/logto-status")
+  @UseGuards(LogtoAuthGuard)
+  @Roles("EXECUTIVE", "ADMIN")
+  async debugLogtoStatus() {
+    return {
+      enabled: this.logtoManagement.isEnabled(),
+      requiredEnvVars: [
+        "LOGTO_M2M_APP_ID",
+        "LOGTO_M2M_APP_SECRET",
+        "LOGTO_APP_APPLICATION_ID",
+      ],
     };
   }
 }

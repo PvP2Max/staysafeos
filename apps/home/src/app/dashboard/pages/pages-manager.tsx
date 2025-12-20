@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@staysafeos/ui";
-import { createPage, createPageFromTemplate, deletePage, updatePage, switchPageEditor } from "@/lib/api/actions";
+import { createPage, createPageFromTemplate, deletePage, updatePage } from "@/lib/api/actions";
 import type { PageBuilderLevel } from "@/lib/stripe";
 import { defaultLandingPageTemplate, getTemplateWithBranding } from "@/lib/templates/landing-page";
 
@@ -50,7 +50,6 @@ export function PagesManager({
   const [newPage, setNewPage] = useState({
     slug: "",
     title: "",
-    editorType: pageBuilderLevel !== "none" ? "grapesjs" : "tiptap" as "tiptap" | "grapesjs",
     isLandingPage: false,
   });
   const [editTitle, setEditTitle] = useState("");
@@ -68,9 +67,7 @@ export function PagesManager({
       try {
         // For Growth tier landing pages, use the template
         const isCreatingLandingPage =
-          pageBuilderLevel !== "none" &&
-          !hasLandingPage &&
-          newPage.editorType === "grapesjs";
+          pageBuilderLevel !== "none" && !hasLandingPage;
 
         if (isCreatingLandingPage && pageBuilderLevel === "template") {
           // Growth tier: use pre-built template
@@ -84,11 +81,11 @@ export function PagesManager({
             true
           );
         } else {
-          // Pro/Enterprise or Tiptap: regular creation
+          // Pro/Enterprise: create with GrapesJS editor
           const formData = new FormData();
           formData.set("slug", newPage.slug);
           formData.set("title", newPage.title);
-          formData.set("editorType", newPage.editorType);
+          formData.set("editorType", "grapesjs");
           formData.set(
             "isLandingPage",
             String(isCreatingLandingPage || newPage.isLandingPage)
@@ -100,7 +97,6 @@ export function PagesManager({
         setNewPage({
           slug: "",
           title: "",
-          editorType: pageBuilderLevel !== "none" ? "grapesjs" : "tiptap",
           isLandingPage: false,
         });
         setMessage("Page created successfully!");
@@ -229,25 +225,6 @@ export function PagesManager({
                             Edit Content
                           </Button>
                         </Link>
-                        {page.editorType === "tiptap" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              startTransition(async () => {
-                                try {
-                                  await switchPageEditor(page.id, "grapesjs");
-                                  setMessage("Switched to visual editor!");
-                                } catch {
-                                  setMessage("Failed to switch editor");
-                                }
-                              });
-                            }}
-                            disabled={isPending}
-                          >
-                            Switch to Visual
-                          </Button>
-                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -332,36 +309,6 @@ export function PagesManager({
                 }
               />
             </div>
-
-            {/* Editor type selection - only show if page builder is available */}
-            {pageBuilderLevel !== "none" && (
-              <div className="space-y-2">
-                <Label>Editor Type</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={newPage.editorType === "grapesjs" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNewPage({ ...newPage, editorType: "grapesjs" })}
-                  >
-                    Visual Editor
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={newPage.editorType === "tiptap" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNewPage({ ...newPage, editorType: "tiptap" })}
-                  >
-                    Text Editor
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {newPage.editorType === "grapesjs"
-                    ? "Drag-and-drop page builder for creating rich landing pages"
-                    : "Simple text editor for content pages"}
-                </p>
-              </div>
-            )}
 
             {/* Landing page checkbox for non-landing pages when builder available */}
             {pageBuilderLevel !== "none" && hasLandingPage && canCreateMultiplePages && (

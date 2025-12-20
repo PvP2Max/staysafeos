@@ -22,7 +22,15 @@ interface PageData {
 async function getPage(id: string): Promise<PageData | null> {
   try {
     const api = await createApiClient();
-    return await api.getPage(id);
+    const page = await api.getPage(id);
+
+    // Auto-upgrade tiptap pages to grapesjs
+    if (page && page.editorType === "tiptap") {
+      await api.updatePage(id, { editorType: "grapesjs" });
+      page.editorType = "grapesjs";
+    }
+
+    return page;
   } catch {
     return null;
   }
