@@ -151,7 +151,7 @@ export class PagesService {
         organizationId: tenantId,
         slug: data.slug,
         title: data.title,
-        editorType: data.editorType ?? "tiptap",
+        editorType: data.editorType ?? "grapesjs",
         blocks: data.blocks ?? [],
         htmlContent: data.htmlContent,
         cssContent: data.cssContent,

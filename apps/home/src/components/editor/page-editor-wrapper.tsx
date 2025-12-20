@@ -2,9 +2,8 @@
 
 import { useState, useTransition, useCallback, useEffect } from "react";
 import { Button, Badge } from "@staysafeos/ui";
-import { BlockEditor } from "./block-editor";
 import { GrapesJSEditor, type PageBuilderLevel } from "./grapesjs-editor";
-import { updatePageContent, updateGrapesJSContent, togglePagePublished } from "@/lib/api/actions";
+import { updateGrapesJSContent, togglePagePublished } from "@/lib/api/actions";
 
 interface PageData {
   id: string;
@@ -36,22 +35,13 @@ export function PageEditorWrapper({
   const [message, setMessage] = useState("");
   const [isPublished, setIsPublished] = useState(page.published);
 
-  // Tiptap content state
-  const [tiptapContent, setTiptapContent] = useState<unknown>(page.blocks);
-
-  // GrapesJS content state
+  // GrapesJS content state - all pages use GrapesJS now
   const [gjsData, setGjsData] = useState<{
     html: string;
     css: string;
     components: unknown;
     styles: unknown;
   } | null>(null);
-
-  // Track Tiptap changes
-  const handleTiptapChange = useCallback((newContent: unknown) => {
-    setTiptapContent(newContent);
-    setHasChanges(true);
-  }, []);
 
   // Track GrapesJS changes
   const handleGrapesJSChange = useCallback(
@@ -62,14 +52,12 @@ export function PageEditorWrapper({
     []
   );
 
-  // Save content
+  // Save content - always use GrapesJS
   const handleSave = useCallback(() => {
     startTransition(async () => {
       try {
-        if (page.editorType === "grapesjs" && gjsData) {
+        if (gjsData) {
           await updateGrapesJSContent(page.id, gjsData);
-        } else {
-          await updatePageContent(page.id, tiptapContent);
         }
         setHasChanges(false);
         setLastSaved(new Date());
@@ -79,7 +67,7 @@ export function PageEditorWrapper({
         setMessage("Failed to save");
       }
     });
-  }, [page.id, page.editorType, tiptapContent, gjsData]);
+  }, [page.id, gjsData]);
 
   // Toggle publish
   const handleTogglePublish = useCallback(() => {
@@ -119,7 +107,7 @@ export function PageEditorWrapper({
             {isPublished ? "Published" : "Draft"}
           </Badge>
           <Badge variant="outline" className="text-xs">
-            {page.editorType === "grapesjs" ? "Visual Editor" : "Text Editor"}
+            Visual Editor
           </Badge>
           {hasChanges && (
             <span className="text-sm text-amber-600 font-medium">
@@ -159,24 +147,16 @@ export function PageEditorWrapper({
         </div>
       </div>
 
-      {/* Editor - switch based on editorType */}
-      {page.editorType === "grapesjs" ? (
-        <GrapesJSEditor
-          htmlContent={page.htmlContent}
-          cssContent={page.cssContent}
-          gjsComponents={page.gjsComponents}
-          gjsStyles={page.gjsStyles}
-          pageBuilderLevel={pageBuilderLevel}
-          canEditFooter={canEditFooter}
-          onChange={handleGrapesJSChange}
-        />
-      ) : (
-        <BlockEditor
-          content={tiptapContent}
-          onChange={handleTiptapChange}
-          editable={true}
-        />
-      )}
+      {/* Editor - always use GrapesJS */}
+      <GrapesJSEditor
+        htmlContent={page.htmlContent}
+        cssContent={page.cssContent}
+        gjsComponents={page.gjsComponents}
+        gjsStyles={page.gjsStyles}
+        pageBuilderLevel={pageBuilderLevel}
+        canEditFooter={canEditFooter}
+        onChange={handleGrapesJSChange}
+      />
 
       {/* Help text */}
       <p className="text-sm text-muted-foreground text-center">

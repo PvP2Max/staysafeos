@@ -24,14 +24,25 @@ async function getPage(id: string): Promise<PageData | null> {
     const api = await createApiClient();
     const page = await api.getPage(id);
 
-    // Auto-upgrade tiptap pages to grapesjs
-    if (page && page.editorType === "tiptap") {
-      await api.updatePage(id, { editorType: "grapesjs" });
+    if (!page) {
+      return null;
+    }
+
+    // Auto-upgrade tiptap pages to grapesjs (or pages with missing/null editorType)
+    if (!page.editorType || page.editorType === "tiptap") {
+      try {
+        await api.updatePage(id, { editorType: "grapesjs" });
+        console.log(`[pages] Auto-upgraded page ${id} from ${page.editorType || "null"} to grapesjs`);
+      } catch (upgradeError) {
+        console.error(`[pages] Failed to auto-upgrade page ${id}:`, upgradeError);
+        // Continue anyway - we'll force grapesjs on the client side
+      }
       page.editorType = "grapesjs";
     }
 
     return page;
-  } catch {
+  } catch (error) {
+    console.error(`[pages] Failed to fetch page ${id}:`, error);
     return null;
   }
 }

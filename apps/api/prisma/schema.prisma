@@ -167,7 +167,7 @@ model Page {
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
   // GrapesJS page builder fields
-  editorType    String   @default("tiptap") @map("editor_type") // "tiptap" | "grapesjs"
+  editorType    String   @default("grapesjs") @map("editor_type") // "tiptap" | "grapesjs"
   htmlContent   String?  @map("html_content")                    // GrapesJS HTML output
   cssContent    String?  @map("css_content")                     // GrapesJS CSS output
   gjsComponents Json?    @map("gjs_components")                  // GrapesJS component JSON (for re-editing)
