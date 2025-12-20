@@ -147,6 +147,36 @@ export class ApiClient {
     return this.fetch(`/v1/vans/suggest?rideId=${rideId}`);
   }
 
+  async createVan(data: {
+    name: string;
+    capacity?: number;
+    licensePlate?: string;
+    status?: "AVAILABLE" | "IN_USE" | "MAINTENANCE" | "OFFLINE";
+  }): Promise<Van> {
+    return this.fetch("/v1/vans", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateVan(id: string, data: {
+    name?: string;
+    capacity?: number;
+    licensePlate?: string;
+    status?: "AVAILABLE" | "IN_USE" | "MAINTENANCE" | "OFFLINE";
+  }): Promise<Van> {
+    return this.fetch(`/v1/vans/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteVan(id: string): Promise<void> {
+    return this.fetch(`/v1/vans/${id}`, {
+      method: "DELETE",
+    });
+  }
+
   // Driver endpoints
   async goOnline(vanId: string) {
     return this.fetch("/v1/driver/go-online", {
@@ -265,6 +295,44 @@ export class ApiClient {
 
   async cancelShiftSignup(shiftId: string) {
     return this.fetch(`/v1/shifts/${shiftId}/signup`, {
+      method: "DELETE",
+    });
+  }
+
+  async createShift(data: {
+    title: string;
+    description?: string;
+    role: "DRIVER" | "TC" | "DISPATCHER" | "SAFETY";
+    startTime: string;
+    endTime: string;
+    slotsNeeded: number;
+    location?: string;
+    notes?: string;
+  }): Promise<Shift> {
+    return this.fetch("/v1/shifts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateShift(id: string, data: {
+    title?: string;
+    description?: string;
+    role?: "DRIVER" | "TC" | "DISPATCHER" | "SAFETY";
+    startTime?: string;
+    endTime?: string;
+    slotsNeeded?: number;
+    location?: string;
+    notes?: string;
+  }): Promise<Shift> {
+    return this.fetch(`/v1/shifts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteShift(id: string): Promise<void> {
+    return this.fetch(`/v1/shifts/${id}`, {
       method: "DELETE",
     });
   }
@@ -396,6 +464,28 @@ export class ApiClient {
         homeLng?: number | null;
       };
     }>("/v1/me/profile-completion");
+  }
+
+  // Organization settings
+  async getOrgSettings(orgId: string) {
+    return this.fetch<{
+      organizationId: string;
+      organizationName: string;
+      rankRequired: boolean;
+      orgRequired: boolean;
+      homeRequired: boolean;
+    }>(`/v1/organizations/${orgId}/settings`);
+  }
+
+  async updateOrgSettings(orgId: string, settings: {
+    rankRequired?: boolean;
+    orgRequired?: boolean;
+    homeRequired?: boolean;
+  }) {
+    return this.fetch<{ success: boolean }>(`/v1/organizations/${orgId}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify(settings),
+    });
   }
 
   // Get tenant theme

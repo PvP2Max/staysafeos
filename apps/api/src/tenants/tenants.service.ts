@@ -29,7 +29,6 @@ const RESERVED_SLUGS = [
   "dev",
   "staging",
   "test",
-  "demo",
 ];
 
 @Injectable()

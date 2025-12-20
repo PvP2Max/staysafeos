@@ -92,6 +92,11 @@ export default async function AdminPage() {
           title="Fleet Management"
           description="Add and manage vans"
         />
+        <AdminCard
+          href="/admin/settings"
+          title="Organization Settings"
+          description="Configure required fields and preferences"
+        />
       </div>
     </div>
   );

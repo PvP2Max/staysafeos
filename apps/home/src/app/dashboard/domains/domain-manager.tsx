@@ -219,7 +219,11 @@ export function DomainManager({ domains: initialDomains, canAddDomains }: Domain
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Added{" "}
-                          {new Date(domain.createdAt).toLocaleDateString()}
+                          {new Date(domain.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
                         </p>
                       </div>
                     </div>
