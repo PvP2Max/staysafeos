@@ -181,7 +181,7 @@ export function DomainManager({ domains: initialDomains, canAddDomains }: Domain
 
       <Card>
         <CardHeader>
-          <CardTitle>Custom Domains ({domains.length})</CardTitle>
+          <CardTitle suppressHydrationWarning>Custom Domains ({domains.length})</CardTitle>
           <CardDescription>
             Connect your own domain to your StaySafeOS site
           </CardDescription>
@@ -217,7 +217,7 @@ export function DomainManager({ domains: initialDomains, canAddDomains }: Domain
                             {domain.verifiedAt ? "Verified" : "Pending"}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground" suppressHydrationWarning>
                           Added{" "}
                           {new Date(domain.createdAt).toLocaleDateString("en-US", {
                             year: "numeric",
