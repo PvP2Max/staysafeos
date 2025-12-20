@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@staysafeos/ui";
-import { createPage, createPageFromTemplate, deletePage, updatePage } from "@/lib/api/actions";
+import { createPage, createPageFromTemplate, deletePage, updatePage, switchPageEditor } from "@/lib/api/actions";
 import type { PageBuilderLevel } from "@/lib/stripe";
 import { defaultLandingPageTemplate, getTemplateWithBranding } from "@/lib/templates/landing-page";
 
@@ -229,6 +229,25 @@ export function PagesManager({
                             Edit Content
                           </Button>
                         </Link>
+                        {page.editorType === "tiptap" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              startTransition(async () => {
+                                try {
+                                  await switchPageEditor(page.id, "grapesjs");
+                                  setMessage("Switched to visual editor!");
+                                } catch {
+                                  setMessage("Failed to switch editor");
+                                }
+                              });
+                            }}
+                            disabled={isPending}
+                          >
+                            Switch to Visual
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"

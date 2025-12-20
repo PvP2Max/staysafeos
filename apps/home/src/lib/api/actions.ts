@@ -182,6 +182,14 @@ export async function togglePagePublished(id: string, published: boolean) {
   return { success: true };
 }
 
+export async function switchPageEditor(id: string, editorType: "tiptap" | "grapesjs") {
+  const api = await createApiClient();
+  await api.updatePage(id, { editorType });
+  revalidatePath("/dashboard/pages");
+  revalidatePath(`/dashboard/pages/${id}`);
+  return { success: true };
+}
+
 // Van management
 export async function createVan(formData: FormData) {
   const api = await createApiClient();

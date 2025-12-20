@@ -218,6 +218,7 @@ export class ApiClient {
     title?: string;
     blocks?: unknown;
     published?: boolean;
+    editorType?: "tiptap" | "grapesjs";
     htmlContent?: string;
     cssContent?: string;
     gjsComponents?: unknown;

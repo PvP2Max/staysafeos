@@ -24,6 +24,7 @@ export interface CreatePageInput {
 export interface UpdatePageInput {
   title?: string;
   published?: boolean;
+  editorType?: EditorType;
   blocks?: Prisma.InputJsonValue;
   htmlContent?: string;
   cssContent?: string;
@@ -179,6 +180,7 @@ export class PagesService {
       data: {
         title: data.title,
         published: data.published,
+        editorType: data.editorType,
         blocks: data.blocks,
         htmlContent: data.htmlContent,
         cssContent: data.cssContent,
