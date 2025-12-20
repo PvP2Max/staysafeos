@@ -1,4 +1,5 @@
 import { getLogtoContext } from "@logto/next/server-actions";
+import { headers } from "next/headers";
 import { logtoConfig } from "@/lib/logto";
 import { ProfileForm } from "./profile-form";
 
@@ -7,12 +8,42 @@ export const metadata = {
   description: "Manage your account settings",
 };
 
-export default async function SettingsPage() {
-  const { claims } = await getLogtoContext(logtoConfig);
+async function fetchProfile() {
+  try {
+    const headersList = await headers();
+    const host = headersList.get("host") || "localhost:3000";
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+    const cookie = headersList.get("cookie") || "";
 
-  // Default profile data from Logto claims
+    const response = await fetch(`${protocol}://${host}/api/me`, {
+      headers: { cookie },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+export default async function SettingsPage() {
+  const [{ claims }, apiProfile] = await Promise.all([
+    getLogtoContext(logtoConfig),
+    fetchProfile(),
+  ]);
+
+  // Combine API data with Logto claims (API takes precedence for name)
+  const firstName = apiProfile?.account?.firstName;
+  const lastName = apiProfile?.account?.lastName;
+  const apiName = firstName
+    ? lastName
+      ? `${firstName} ${lastName}`
+      : firstName
+    : null;
+
   const profileData = {
-    name: claims?.name as string | undefined,
+    name: apiName || (claims?.name as string | undefined),
     email: claims?.email as string | undefined,
     avatarUrl: claims?.picture as string | undefined,
   };

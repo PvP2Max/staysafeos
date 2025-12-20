@@ -23,6 +23,15 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
 
+    // Transform 'name' field to firstName/lastName for API compatibility
+    const apiBody: Record<string, unknown> = { ...body };
+    if (body.name !== undefined) {
+      const nameParts = (body.name as string).trim().split(/\s+/);
+      apiBody.firstName = nameParts[0] || null;
+      apiBody.lastName = nameParts.slice(1).join(" ") || null;
+      delete apiBody.name;
+    }
+
     // Get access token for the API resource
     const accessToken = await getApiAccessToken();
 
@@ -32,14 +41,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // Forward to API
+    // Forward to API using PUT (API uses @Put decorator)
     const response = await fetch(`${getApiBaseUrl()}/v1/me`, {
-      method: "PATCH",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(apiBody),
     });
 
     const data = await response.json().catch(() => ({}));
