@@ -69,18 +69,15 @@ export async function uploadImage(
 
   // Return the delivery URL with the appropriate variant
   // Cloudflare Images URL format: https://imagedelivery.net/{account_hash}/{image_id}/{variant}
-  // We'll use the "public" variant which serves the original
-  const imageId = result.result.id;
   const variants = result.result.variants;
 
-  // Return the first variant URL (usually the public one)
-  // The URL format includes the variant name at the end
-  if (variants && variants.length > 0) {
-    return variants[0];
+  // Cloudflare always returns variant URLs with the correct account hash
+  if (!variants || variants.length === 0) {
+    throw new Error("No delivery URL returned from Cloudflare Images");
   }
 
-  // Fallback: construct URL from result
-  return `https://imagedelivery.net/${CF_ACCOUNT_ID}/${imageId}/public`;
+  // Return the first variant URL (contains the public URL with account hash)
+  return variants[0];
 }
 
 /**
