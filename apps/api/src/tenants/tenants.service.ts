@@ -186,6 +186,60 @@ export class TenantsService {
   }
 
   /**
+   * Update current user's tenant branding/theme
+   */
+  async updateCurrentTenantBranding(
+    accountId: string,
+    data: {
+      name?: string;
+      logoUrl?: string;
+      faviconUrl?: string;
+      primaryColor?: string;
+      secondaryColor?: string;
+      tertiaryColor?: string;
+    }
+  ) {
+    // Find the first organization owned by this account
+    const org = await this.prisma.organization.findFirst({
+      where: { ownerAccountId: accountId },
+      include: { theme: true },
+    });
+
+    if (!org) {
+      throw new NotFoundException("No organization found for this account");
+    }
+
+    // Update organization name if provided
+    if (data.name) {
+      await this.prisma.organization.update({
+        where: { id: org.id },
+        data: { name: data.name },
+      });
+    }
+
+    // Update theme if any theme-related fields are provided
+    const themeData: Record<string, string | null> = {};
+    if (data.logoUrl !== undefined) themeData.logoUrl = data.logoUrl || null;
+    if (data.faviconUrl !== undefined) themeData.faviconUrl = data.faviconUrl || null;
+    if (data.primaryColor !== undefined) themeData.primaryColor = data.primaryColor;
+    if (data.secondaryColor !== undefined) themeData.backgroundColor = data.secondaryColor;
+    if (data.tertiaryColor !== undefined) themeData.mutedColor = data.tertiaryColor;
+
+    if (Object.keys(themeData).length > 0 && org.themeId) {
+      await this.prisma.theme.update({
+        where: { id: org.themeId },
+        data: themeData,
+      });
+    }
+
+    // Return updated organization with theme
+    return this.prisma.organization.findUnique({
+      where: { id: org.id },
+      include: { theme: true },
+    });
+  }
+
+  /**
    * Update Stripe customer ID
    */
   async updateStripeCustomer(id: string, stripeCustomerId: string) {

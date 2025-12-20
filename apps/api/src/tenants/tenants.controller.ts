@@ -53,6 +53,29 @@ export class TenantsController {
   }
 
   /**
+   * Update current user's tenant branding/theme
+   * Uses the first owned tenant of the authenticated user
+   */
+  @Patch("current")
+  async updateCurrentTenant(
+    @Body() body: {
+      name?: string;
+      logoUrl?: string;
+      faviconUrl?: string;
+      primaryColor?: string;
+      secondaryColor?: string;
+      tertiaryColor?: string;
+    }
+  ) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    return this.tenantsService.updateCurrentTenantBranding(accountId, body);
+  }
+
+  /**
    * Update Stripe customer ID for an organization
    */
   @Patch(":id/stripe-customer")
