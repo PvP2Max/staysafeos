@@ -96,22 +96,16 @@ export function DomainManager({ domains: initialDomains, canAddDomains }: Domain
 
   const handleVerify = (id: string) => {
     startTransition(async () => {
-      try {
-        const result = await verifyDomain(id);
-        if (result && typeof result === "object" && "id" in result) {
-          setDomains(
-            domains.map((d) =>
-              d.id === id ? (result as Domain) : d
-            )
-          );
-        }
-        setMessage("Domain verified successfully!");
-      } catch (error) {
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : "Verification failed. Check your DNS records."
+      const result = await verifyDomain(id);
+      if (result.success && result.data) {
+        setDomains(
+          domains.map((d) =>
+            d.id === id ? (result.data as Domain) : d
+          )
         );
+        setMessage("Domain verified successfully!");
+      } else {
+        setMessage(result.error || "Verification failed. Check your DNS records.");
       }
     });
   };

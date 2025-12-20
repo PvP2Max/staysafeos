@@ -211,29 +211,56 @@ export async function deleteVan(id: string) {
 
 // Domain management
 export async function addDomain(domain: string, isPrimary: boolean = false) {
-  const api = await createApiClient();
-  const result = await api.addDomain({ domain, isPrimary });
-  revalidatePath("/dashboard/domains");
-  return result;
+  try {
+    const api = await createApiClient();
+    const result = await api.addDomain({ domain, isPrimary });
+    revalidatePath("/dashboard/domains");
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to add domain";
+    throw new Error(message);
+  }
 }
 
 export async function verifyDomain(id: string) {
-  const api = await createApiClient();
-  const result = await api.verifyDomain(id);
-  revalidatePath("/dashboard/domains");
-  return result;
+  try {
+    const api = await createApiClient();
+    const result = await api.verifyDomain(id);
+    revalidatePath("/dashboard/domains");
+    return { success: true, data: result };
+  } catch (error) {
+    // Return a user-friendly error message for DNS verification failures
+    const message = error instanceof Error ? error.message : "Verification failed";
+    if (message.includes("DNS verification failed")) {
+      return {
+        success: false,
+        error: "DNS records not found or not propagated yet. Please check your DNS configuration and try again in a few minutes."
+      };
+    }
+    return { success: false, error: message };
+  }
 }
 
 export async function setPrimaryDomain(id: string) {
-  const api = await createApiClient();
-  await api.setPrimaryDomain(id);
-  revalidatePath("/dashboard/domains");
-  return { success: true };
+  try {
+    const api = await createApiClient();
+    await api.setPrimaryDomain(id);
+    revalidatePath("/dashboard/domains");
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to set primary domain";
+    throw new Error(message);
+  }
 }
 
 export async function deleteDomain(id: string) {
-  const api = await createApiClient();
-  await api.deleteDomain(id);
-  revalidatePath("/dashboard/domains");
-  return { success: true };
+  try {
+    const api = await createApiClient();
+    await api.deleteDomain(id);
+    revalidatePath("/dashboard/domains");
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete domain";
+    throw new Error(message);
+  }
 }
