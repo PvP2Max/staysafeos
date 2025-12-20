@@ -61,10 +61,12 @@ export default async function DashboardLayout({
 
     // Check membership status
     const status = await api.getMembershipStatus();
+    console.log("[dashboard/layout] Membership status:", JSON.stringify(status));
     if (status.hasAccount && !status.hasMembership) {
       redirect("/no-membership");
     }
     role = status.role;
+    console.log("[dashboard/layout] Role set to:", role);
 
     // Get user profile
     try {
@@ -122,8 +124,9 @@ export default async function DashboardLayout({
     } catch {
       // Theme fetch failed, continue with default branding
     }
-  } catch {
+  } catch (error) {
     // If API calls fail, continue with defaults
+    console.error("[dashboard/layout] API error:", error);
   }
 
   async function handleSignOut() {

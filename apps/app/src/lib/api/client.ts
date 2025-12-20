@@ -523,6 +523,7 @@ export async function createApiClient(): Promise<ApiClient> {
 
   // Get tenant from subdomain (e.g., wainwright.staysafeos.com -> wainwright)
   const tenantId = await getTenantFromRequest();
+  console.log("[createApiClient] Tenant ID from request:", tenantId);
 
   return new ApiClient(accessToken, tenantId ?? undefined);
 }
