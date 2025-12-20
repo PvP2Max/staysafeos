@@ -145,7 +145,10 @@ export class LogtoAuthGuard implements CanActivate {
 
     // Get tenant slug from context or header
     const tenantSlug = this.requestContext.tenantSlug;
-    if (!tenantSlug) return;
+    if (!tenantSlug) {
+      console.log(`[auth] No tenant slug in context for account ${account.id} (${account.email})`);
+      return;
+    }
 
     // Load membership for this tenant (support slug, database ID, or Logto org ID)
     const membership = await this.prisma.membership.findFirst({
@@ -168,6 +171,22 @@ export class LogtoAuthGuard implements CanActivate {
         },
       },
     });
+
+    if (!membership) {
+      // Debug: Log why membership wasn't found
+      console.log(`[auth] No membership found for account ${account.id} in tenant "${tenantSlug}"`);
+
+      // Check if any membership exists for this account
+      const anyMembership = await this.prisma.membership.findFirst({
+        where: { accountId: account.id },
+        include: { organization: { select: { slug: true, id: true } } },
+      });
+      if (anyMembership) {
+        console.log(`[auth] Account has membership in org: ${anyMembership.organization.slug} (${anyMembership.organization.id}), role: ${anyMembership.role}`);
+      } else {
+        console.log(`[auth] Account has no memberships at all`);
+      }
+    }
 
     if (membership) {
       this.requestContext.setMembership({
