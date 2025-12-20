@@ -45,6 +45,21 @@ export async function updateFeatures(features: Record<string, boolean>) {
   return { success: true };
 }
 
+// Required profile fields settings
+export async function updateRequiredFields(
+  orgId: string,
+  settings: {
+    rankRequired?: boolean;
+    orgRequired?: boolean;
+    homeRequired?: boolean;
+  }
+) {
+  const api = await createApiClient();
+  await api.updateOrgSettings(orgId, settings);
+  revalidatePath("/dashboard/settings");
+  return { success: true };
+}
+
 // Member management
 export async function updateMemberRole(membershipId: string, role: string) {
   const api = await createApiClient();

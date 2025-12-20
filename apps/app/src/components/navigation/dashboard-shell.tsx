@@ -10,10 +10,21 @@ interface DashboardShellProps {
     email: string;
     firstName?: string;
     lastName?: string;
+    phone?: string;
+    rank?: string;
+    unit?: string;
+    homeAddress?: string;
+    homeLat?: number;
+    homeLng?: number;
   };
   role: string | null;
   onShiftRoles: string[];
   signOutAction: () => Promise<void>;
+  theme?: {
+    logoUrl?: string | null;
+    faviconUrl?: string | null;
+  };
+  logtoEndpoint?: string;
 }
 
 export function DashboardShell({
@@ -22,6 +33,8 @@ export function DashboardShell({
   role,
   onShiftRoles,
   signOutAction,
+  theme,
+  logtoEndpoint,
 }: DashboardShellProps) {
   return (
     <SidebarProvider>
@@ -30,6 +43,8 @@ export function DashboardShell({
         role={role}
         onShiftRoles={onShiftRoles}
         onSignOut={signOutAction}
+        theme={theme}
+        logtoEndpoint={logtoEndpoint}
       />
       <SidebarInset>
         <MobileHeader />

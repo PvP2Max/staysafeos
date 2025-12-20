@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { AccountsService } from "./accounts.service";
 import { LogtoAuthGuard } from "../auth/logto-auth.guard";
-import { IsString, IsOptional } from "class-validator";
+import { IsString, IsOptional, IsNumber } from "class-validator";
 
 class UpdateProfileDto {
   @IsOptional()
@@ -21,6 +21,26 @@ class UpdateProfileDto {
   @IsOptional()
   @IsString()
   phone?: string | null;
+
+  @IsOptional()
+  @IsString()
+  rank?: string | null;
+
+  @IsOptional()
+  @IsString()
+  unit?: string | null;
+
+  @IsOptional()
+  @IsString()
+  homeAddress?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  homeLat?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  homeLng?: number | null;
 }
 
 @Controller("me")
@@ -52,5 +72,13 @@ export class AccountsController {
   @Get("on-shift")
   async getOnShiftStatus() {
     return this.accountsService.getOnShiftStatus();
+  }
+
+  /**
+   * Check profile completion status against org requirements
+   */
+  @Get("profile-completion")
+  async getProfileCompletion() {
+    return this.accountsService.getProfileCompletion();
   }
 }

@@ -307,6 +307,76 @@ export class TenantsService {
   }
 
   /**
+   * Get organization settings including required fields (owner only)
+   */
+  async getOrganizationSettings(orgId: string, accountId: string) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      include: { settings: true },
+    });
+
+    if (!org) {
+      throw new NotFoundException("Organization not found");
+    }
+
+    if (org.ownerAccountId !== accountId) {
+      throw new ForbiddenException("Only the organization owner can view settings");
+    }
+
+    const settings = org.settings;
+    return {
+      organizationId: org.id,
+      organizationName: org.name,
+      rankRequired: settings?.rankRequired ?? false,
+      orgRequired: settings?.orgRequired ?? false,
+      homeRequired: settings?.homeRequired ?? false,
+    };
+  }
+
+  /**
+   * Update organization settings including required fields (owner only)
+   */
+  async updateOrganizationSettings(
+    orgId: string,
+    accountId: string,
+    data: {
+      rankRequired?: boolean;
+      orgRequired?: boolean;
+      homeRequired?: boolean;
+    }
+  ) {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { ownerAccountId: true },
+    });
+
+    if (!org) {
+      throw new NotFoundException("Organization not found");
+    }
+
+    if (org.ownerAccountId !== accountId) {
+      throw new ForbiddenException("Only the organization owner can update settings");
+    }
+
+    await this.prisma.organizationSettings.upsert({
+      where: { organizationId: orgId },
+      create: {
+        organizationId: orgId,
+        rankRequired: data.rankRequired ?? false,
+        orgRequired: data.orgRequired ?? false,
+        homeRequired: data.homeRequired ?? false,
+      },
+      update: {
+        ...(data.rankRequired !== undefined && { rankRequired: data.rankRequired }),
+        ...(data.orgRequired !== undefined && { orgRequired: data.orgRequired }),
+        ...(data.homeRequired !== undefined && { homeRequired: data.homeRequired }),
+      },
+    });
+
+    return { success: true };
+  }
+
+  /**
    * Delete an organization (owner only)
    * Archives stats to GlobalStats before hard deletion
    */

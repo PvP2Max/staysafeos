@@ -37,6 +37,17 @@ export interface NavSection {
 export function getNavItems(role: string | null, onShiftRoles: string[] = []): NavSection[] {
   const sections: NavSection[] = [];
 
+  // Fallback when role is unknown - show basic navigation
+  if (!role) {
+    sections.push({
+      title: "Navigation",
+      items: [
+        { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      ],
+    });
+    return sections;
+  }
+
   // Rider section - only for riders
   if (role === "RIDER") {
     sections.push({

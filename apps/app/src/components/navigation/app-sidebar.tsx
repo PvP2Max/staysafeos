@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Sidebar,
@@ -14,40 +15,48 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, Badge, Button, Separator } from "@staysafeos/ui";
-import { LogOut, ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { Badge, Button, Separator } from "@staysafeos/ui";
+import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { getNavItems, isNavItemActive, type NavSection } from "./nav-config";
+import { AccountMenu } from "./account-menu";
 
 interface AppSidebarProps {
   user: {
     email: string;
     firstName?: string;
     lastName?: string;
+    phone?: string;
+    rank?: string;
+    unit?: string;
+    homeAddress?: string;
+    homeLat?: number;
+    homeLng?: number;
   };
   role: string | null;
   onShiftRoles: string[];
   onSignOut: () => void;
+  theme?: {
+    logoUrl?: string | null;
+    faviconUrl?: string | null;
+  };
+  logtoEndpoint?: string;
 }
 
-export function AppSidebar({ user, role, onShiftRoles, onSignOut }: AppSidebarProps) {
+export function AppSidebar({ user, role, onShiftRoles, onSignOut, theme, logtoEndpoint }: AppSidebarProps) {
   const pathname = usePathname();
   const { isCollapsed, setIsCollapsed, isMobile, setIsOpen } = useSidebar();
 
   const navSections = getNavItems(role, onShiftRoles);
-
-  const displayName = user.firstName && user.lastName
-    ? `${user.firstName} ${user.lastName}`
-    : user.email.split("@")[0];
-
-  const initials = user.firstName && user.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`
-    : user.email[0].toUpperCase();
 
   const handleNavClick = () => {
     if (isMobile) {
       setIsOpen(false);
     }
   };
+
+  // Determine which logo to show based on collapse state
+  const showCustomLogo = theme?.logoUrl && (!isCollapsed || isMobile);
+  const showCustomFavicon = theme?.faviconUrl && isCollapsed && !isMobile;
 
   return (
     <Sidebar collapsible="icon">
@@ -57,9 +66,29 @@ export function AppSidebar({ user, role, onShiftRoles, onSignOut }: AppSidebarPr
           className="flex items-center gap-2 overflow-hidden"
           onClick={handleNavClick}
         >
-          <Shield className="h-6 w-6 shrink-0 text-primary" />
-          {(!isCollapsed || isMobile) && (
-            <span className="text-lg font-bold whitespace-nowrap">StaySafeOS</span>
+          {showCustomLogo ? (
+            <Image
+              src={theme.logoUrl!}
+              alt="Organization logo"
+              width={120}
+              height={32}
+              className="h-8 w-auto object-contain"
+            />
+          ) : showCustomFavicon ? (
+            <Image
+              src={theme.faviconUrl!}
+              alt="Organization icon"
+              width={24}
+              height={24}
+              className="h-6 w-6 shrink-0 object-contain"
+            />
+          ) : (
+            <>
+              <Shield className="h-6 w-6 shrink-0 text-primary" />
+              {(!isCollapsed || isMobile) && (
+                <span className="text-lg font-bold whitespace-nowrap">StaySafeOS</span>
+              )}
+            </>
           )}
         </Link>
         {!isMobile && (
@@ -115,42 +144,14 @@ export function AppSidebar({ user, role, onShiftRoles, onSignOut }: AppSidebarPr
       </SidebarContent>
 
       <SidebarFooter>
-        <Separator className="mb-4" />
-        <div className={`flex items-center gap-3 ${isCollapsed && !isMobile ? "justify-center" : ""}`}>
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="bg-primary/10 text-primary text-sm">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          {(!isCollapsed || isMobile) && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{displayName}</p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-              </div>
-              {role && (
-                <Badge variant="outline" className="mt-1 text-xs">
-                  {role}
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
-        {(!isCollapsed || isMobile) && (
-          <form action={onSignOut} className="mt-3">
-            <Button variant="ghost" size="sm" className="w-full justify-start" type="submit">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </form>
-        )}
-        {isCollapsed && !isMobile && (
-          <form action={onSignOut} className="mt-3 flex justify-center">
-            <Button variant="ghost" size="icon" className="h-9 w-9" type="submit">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </form>
-        )}
+        <Separator className="mb-2" />
+        <AccountMenu
+          user={user}
+          role={role}
+          isCollapsed={isCollapsed && !isMobile}
+          onSignOut={onSignOut}
+          logtoEndpoint={logtoEndpoint}
+        />
       </SidebarFooter>
     </Sidebar>
   );

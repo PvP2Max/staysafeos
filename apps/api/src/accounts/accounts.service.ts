@@ -57,6 +57,11 @@ export class AccountsService {
     firstName?: string | null;
     lastName?: string | null;
     phone?: string | null;
+    rank?: string | null;
+    unit?: string | null;
+    homeAddress?: string | null;
+    homeLat?: number | null;
+    homeLng?: number | null;
   }) {
     const accountId = this.requestContext.accountId;
     if (!accountId) {
@@ -69,6 +74,11 @@ export class AccountsService {
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
+        rank: data.rank,
+        unit: data.unit,
+        homeAddress: data.homeAddress,
+        homeLat: data.homeLat,
+        homeLng: data.homeLng,
       },
     });
 
@@ -80,6 +90,97 @@ export class AccountsService {
     });
 
     return this.getMe();
+  }
+
+  /**
+   * Check profile completion against organization requirements
+   */
+  async getProfileCompletion() {
+    const store = this.requestContext.store;
+    const accountId = store?.accountId;
+    const organizationId = store?.organizationId;
+
+    if (!accountId) {
+      throw new Error("Not authenticated");
+    }
+
+    // Get account with full profile data
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+      select: {
+        firstName: true,
+        lastName: true,
+        phone: true,
+        rank: true,
+        unit: true,
+        homeAddress: true,
+        homeLat: true,
+        homeLng: true,
+      },
+    });
+
+    if (!account) {
+      throw new Error("Account not found");
+    }
+
+    // Get organization settings if in tenant context
+    let requiredFields = { rank: false, org: false, home: false };
+    if (organizationId) {
+      const settings = await this.prisma.organizationSettings.findUnique({
+        where: { organizationId },
+        select: {
+          rankRequired: true,
+          orgRequired: true,
+          homeRequired: true,
+        },
+      });
+
+      if (settings) {
+        requiredFields = {
+          rank: settings.rankRequired,
+          org: settings.orgRequired,
+          home: settings.homeRequired,
+        };
+      }
+    }
+
+    // Check which required fields are missing
+    const missingFields: string[] = [];
+
+    // Name and phone are always required
+    if (!account.firstName || !account.lastName) {
+      missingFields.push("name");
+    }
+    if (!account.phone) {
+      missingFields.push("phone");
+    }
+
+    // Check configurable requirements
+    if (requiredFields.rank && !account.rank) {
+      missingFields.push("rank");
+    }
+    if (requiredFields.org && !account.unit) {
+      missingFields.push("unit");
+    }
+    if (requiredFields.home && !account.homeAddress) {
+      missingFields.push("homeAddress");
+    }
+
+    return {
+      isComplete: missingFields.length === 0,
+      missingFields,
+      requiredFields,
+      account: {
+        firstName: account.firstName,
+        lastName: account.lastName,
+        phone: account.phone,
+        rank: account.rank,
+        unit: account.unit,
+        homeAddress: account.homeAddress,
+        homeLat: account.homeLat,
+        homeLng: account.homeLng,
+      },
+    };
   }
 
   /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -13,22 +13,72 @@ import {
   Label,
   Textarea,
 } from "@staysafeos/ui";
-import { Send, MapPin, Phone, User, Users } from "lucide-react";
+import { Send, Phone, User, Users } from "lucide-react";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
+
+interface UserProfile {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  homeAddress?: string;
+  homeLat?: number;
+  homeLng?: number;
+}
 
 export default function RequestRidePage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const [formData, setFormData] = useState({
     riderName: "",
     riderPhone: "",
     passengerCount: 1,
     pickupAddress: "",
+    pickupLat: undefined as number | undefined,
+    pickupLng: undefined as number | undefined,
     dropoffAddress: "",
+    dropoffLat: undefined as number | undefined,
+    dropoffLng: undefined as number | undefined,
     notes: "",
   });
+
+  // Fetch user profile for home address and pre-fill name/phone
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const response = await fetch("/api/me");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.account) {
+            setUserProfile({
+              firstName: data.account.firstName,
+              lastName: data.account.lastName,
+              phone: data.account.phone,
+              homeAddress: data.account.homeAddress,
+              homeLat: data.account.homeLat,
+              homeLng: data.account.homeLng,
+            });
+
+            // Pre-fill form with user data
+            const name = [data.account.firstName, data.account.lastName]
+              .filter(Boolean)
+              .join(" ");
+            setFormData((prev) => ({
+              ...prev,
+              riderName: name || prev.riderName,
+              riderPhone: data.account.phone || prev.riderPhone,
+            }));
+          }
+        }
+      } catch {
+        // Failed to fetch profile, continue without it
+      }
+    }
+    fetchProfile();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +89,18 @@ export default function RequestRidePage() {
         const response = await fetch("/api/rides", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            riderName: formData.riderName,
+            riderPhone: formData.riderPhone,
+            passengerCount: formData.passengerCount,
+            pickupAddress: formData.pickupAddress,
+            pickupLat: formData.pickupLat,
+            pickupLng: formData.pickupLng,
+            dropoffAddress: formData.dropoffAddress,
+            dropoffLat: formData.dropoffLat,
+            dropoffLng: formData.dropoffLng,
+            notes: formData.notes,
+          }),
         });
 
         if (!response.ok) {
@@ -48,15 +109,18 @@ export default function RequestRidePage() {
         }
 
         setSuccess(true);
-        // Reset form
-        setFormData({
-          riderName: "",
-          riderPhone: "",
+        // Reset form (but keep name/phone from profile)
+        setFormData((prev) => ({
+          ...prev,
           passengerCount: 1,
           pickupAddress: "",
+          pickupLat: undefined,
+          pickupLng: undefined,
           dropoffAddress: "",
+          dropoffLat: undefined,
+          dropoffLng: undefined,
           notes: "",
-        });
+        }));
 
         // Redirect after short delay
         setTimeout(() => {
@@ -66,6 +130,24 @@ export default function RequestRidePage() {
         setError(err instanceof Error ? err.message : "Failed to submit ride request");
       }
     });
+  };
+
+  const handlePickupChange = (address: string, lat?: number, lng?: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      pickupAddress: address,
+      pickupLat: lat,
+      pickupLng: lng,
+    }));
+  };
+
+  const handleDropoffChange = (address: string, lat?: number, lng?: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      dropoffAddress: address,
+      dropoffLat: lat,
+      dropoffLng: lng,
+    }));
   };
 
   if (success) {
@@ -154,30 +236,33 @@ export default function RequestRidePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pickupAddress" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-green-600" />
+              <Label className="flex items-center gap-2 text-green-600">
                 Pickup Location
               </Label>
-              <Input
-                id="pickupAddress"
-                placeholder="123 Main St, Building A"
+              <AddressAutocomplete
                 value={formData.pickupAddress}
-                onChange={(e) => setFormData({ ...formData, pickupAddress: e.target.value })}
-                required
+                onChange={handlePickupChange}
+                placeholder="Enter pickup address..."
+                showCurrentLocation
+                disabled={isPending}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dropoffAddress" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-red-600" />
+              <Label className="flex items-center gap-2 text-red-600">
                 Dropoff Location
               </Label>
-              <Input
-                id="dropoffAddress"
-                placeholder="456 Oak Ave, Apt 2"
+              <AddressAutocomplete
                 value={formData.dropoffAddress}
-                onChange={(e) => setFormData({ ...formData, dropoffAddress: e.target.value })}
-                required
+                onChange={handleDropoffChange}
+                placeholder="Enter dropoff address..."
+                showHomeAddress={!!userProfile?.homeAddress}
+                homeAddress={userProfile?.homeAddress ? {
+                  address: userProfile.homeAddress,
+                  lat: userProfile.homeLat,
+                  lng: userProfile.homeLng,
+                } : undefined}
+                disabled={isPending}
               />
             </div>
 

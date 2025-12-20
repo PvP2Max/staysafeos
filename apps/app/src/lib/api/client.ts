@@ -4,6 +4,7 @@
 
 import { getLogtoContext } from "@logto/next/server-actions";
 import { getLogtoConfig } from "@/lib/logto";
+import { getTenantFromRequest } from "@/lib/tenant";
 import type { Ride, Van, AnalyticsSummary, TrainingModule, TrainingProgress, Shift, VanTransfer, VanTask, Membership } from "./types";
 
 const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
@@ -340,6 +341,12 @@ export class ApiClient {
         email: string;
         firstName?: string;
         lastName?: string;
+        phone?: string;
+        rank?: string;
+        unit?: string;
+        homeAddress?: string;
+        homeLat?: number;
+        homeLng?: number;
       };
       membership: Membership | null;
       ownedTenants: Array<{
@@ -350,23 +357,78 @@ export class ApiClient {
       }>;
     }>("/v1/me");
   }
+
+  // Update user profile
+  async updateProfile(data: {
+    firstName?: string | null;
+    lastName?: string | null;
+    phone?: string | null;
+    rank?: string | null;
+    unit?: string | null;
+    homeAddress?: string | null;
+    homeLat?: number | null;
+    homeLng?: number | null;
+  }) {
+    return this.fetch("/v1/me", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Get profile completion status
+  async getProfileCompletion() {
+    return this.fetch<{
+      isComplete: boolean;
+      missingFields: string[];
+      requiredFields: {
+        rank: boolean;
+        org: boolean;
+        home: boolean;
+      };
+      account: {
+        firstName?: string | null;
+        lastName?: string | null;
+        phone?: string | null;
+        rank?: string | null;
+        unit?: string | null;
+        homeAddress?: string | null;
+        homeLat?: number | null;
+        homeLng?: number | null;
+      };
+    }>("/v1/me/profile-completion");
+  }
+
+  // Get tenant theme
+  async getTheme(slug: string) {
+    return this.fetch<{
+      id: string;
+      tenantId: string;
+      primaryColor?: string | null;
+      secondaryColor?: string | null;
+      accentColor?: string | null;
+      logoUrl?: string | null;
+      faviconUrl?: string | null;
+      customCss?: string | null;
+    }>(`/v1/theming/org/${slug}`);
+  }
 }
 
 /**
  * Create authenticated API client from Logto session
+ * Tenant is resolved from the request subdomain (e.g., wainwright.staysafeos.com)
  */
 export async function createApiClient(): Promise<ApiClient> {
   const logtoConfig = await getLogtoConfig();
-  const { isAuthenticated, accessToken, claims } = await getLogtoContext(logtoConfig);
+  const { isAuthenticated, accessToken } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated || !accessToken) {
     throw new Error("Not authenticated");
   }
 
-  const organizations = claims?.organizations as string[] | undefined;
-  const tenantId = organizations?.[0];
+  // Get tenant from subdomain (e.g., wainwright.staysafeos.com -> wainwright)
+  const tenantId = await getTenantFromRequest();
 
-  return new ApiClient(accessToken, tenantId);
+  return new ApiClient(accessToken, tenantId ?? undefined);
 }
 
 /**

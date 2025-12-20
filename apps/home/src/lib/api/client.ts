@@ -314,6 +314,28 @@ export class ApiClient {
     }>("/v1/me");
   }
 
+  // Organization settings endpoints
+  async getOrgSettings(orgId: string) {
+    return this.fetch<{
+      organizationId: string;
+      organizationName: string;
+      rankRequired: boolean;
+      orgRequired: boolean;
+      homeRequired: boolean;
+    }>(`/v1/organizations/${orgId}/settings`);
+  }
+
+  async updateOrgSettings(orgId: string, settings: {
+    rankRequired?: boolean;
+    orgRequired?: boolean;
+    homeRequired?: boolean;
+  }) {
+    return this.fetch<{ success: boolean }>(`/v1/organizations/${orgId}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify(settings),
+    });
+  }
+
   // Domains endpoints
   async getDomains() {
     return this.fetch<Array<{

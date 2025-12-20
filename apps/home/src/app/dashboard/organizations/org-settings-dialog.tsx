@@ -51,30 +51,65 @@ const FEATURE_DESCRIPTIONS: Record<string, { label: string; description: string 
   },
 };
 
+const REQUIRED_FIELDS_DESCRIPTIONS: Record<string, { label: string; description: string }> = {
+  rankRequired: {
+    label: "Require Rank",
+    description: "Riders must provide their military rank before requesting rides",
+  },
+  orgRequired: {
+    label: "Require Organization/Unit",
+    description: "Riders must provide their unit/organization before requesting rides",
+  },
+  homeRequired: {
+    label: "Require Home Address",
+    description: "Riders must provide their home address before requesting rides",
+  },
+};
+
 export function OrgSettingsDialog({ organizationId, organizationName, trigger }: OrgSettingsDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
+  const [requiredFields, setRequiredFields] = useState<Record<string, boolean>>({
+    rankRequired: false,
+    orgRequired: false,
+    homeRequired: false,
+  });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // Fetch features when dialog opens
+  // Fetch features and required fields when dialog opens
   useEffect(() => {
     if (open) {
       setLoading(true);
       setError("");
-      fetch(`/api/organizations/${organizationId}/features`)
-        .then(async (res) => {
+
+      // Fetch both features and settings in parallel
+      Promise.all([
+        fetch(`/api/organizations/${organizationId}/features`).then(async (res) => {
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || "Failed to load features");
+          }
+          return res.json();
+        }),
+        fetch(`/api/organizations/${organizationId}/settings`).then(async (res) => {
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
             throw new Error(data.message || "Failed to load settings");
           }
           return res.json();
-        })
-        .then((data) => {
-          setFeatures(data.features || {});
+        }),
+      ])
+        .then(([featuresData, settingsData]) => {
+          setFeatures(featuresData.features || {});
+          setRequiredFields({
+            rankRequired: settingsData.rankRequired ?? false,
+            orgRequired: settingsData.orgRequired ?? false,
+            homeRequired: settingsData.homeRequired ?? false,
+          });
         })
         .catch((err) => {
           setError(err.message);
@@ -93,8 +128,12 @@ export function OrgSettingsDialog({ organizationId, organizationName, trigger }:
     }
   }, [open]);
 
-  const handleToggle = (key: string, value: boolean): void => {
+  const handleFeatureToggle = (key: string, value: boolean): void => {
     setFeatures((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleRequiredFieldToggle = (key: string, value: boolean): void => {
+    setRequiredFields((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
@@ -102,14 +141,27 @@ export function OrgSettingsDialog({ organizationId, organizationName, trigger }:
     setError("");
     startTransition(async () => {
       try {
-        const response = await fetch(`/api/organizations/${organizationId}/features`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(features),
-        });
+        // Save both features and required fields in parallel
+        const [featuresRes, settingsRes] = await Promise.all([
+          fetch(`/api/organizations/${organizationId}/features`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(features),
+          }),
+          fetch(`/api/organizations/${organizationId}/settings`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requiredFields),
+          }),
+        ]);
 
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
+        if (!featuresRes.ok) {
+          const data = await featuresRes.json().catch(() => ({}));
+          throw new Error(data.message || "Failed to save features");
+        }
+
+        if (!settingsRes.ok) {
+          const data = await settingsRes.json().catch(() => ({}));
           throw new Error(data.message || "Failed to save settings");
         }
 
@@ -149,23 +201,57 @@ export function OrgSettingsDialog({ organizationId, organizationName, trigger }:
             {error}
           </div>
         ) : (
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {Object.entries(FEATURE_DESCRIPTIONS).map(([key, { label, description }]) => (
-              <div key={key} className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5 flex-1">
-                  <Label htmlFor={`feature-${key}`} className="text-base cursor-pointer">
-                    {label}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">{description}</p>
+          <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
+            {/* Feature Toggles Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                Feature Toggles
+              </h3>
+              {Object.entries(FEATURE_DESCRIPTIONS).map(([key, { label, description }]) => (
+                <div key={key} className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor={`feature-${key}`} className="text-base cursor-pointer">
+                      {label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">{description}</p>
+                  </div>
+                  <Switch
+                    id={`feature-${key}`}
+                    checked={features[key] ?? true}
+                    onCheckedChange={(value: boolean) => handleFeatureToggle(key, value)}
+                    disabled={isPending}
+                  />
                 </div>
-                <Switch
-                  id={`feature-${key}`}
-                  checked={features[key] ?? true}
-                  onCheckedChange={(value: boolean) => handleToggle(key, value)}
-                  disabled={isPending}
-                />
+              ))}
+            </div>
+
+            {/* Required Profile Fields Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <div>
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Required Profile Fields
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Name and Phone Number are always required
+                </p>
               </div>
-            ))}
+              {Object.entries(REQUIRED_FIELDS_DESCRIPTIONS).map(([key, { label, description }]) => (
+                <div key={key} className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label htmlFor={`required-${key}`} className="text-base cursor-pointer">
+                      {label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">{description}</p>
+                  </div>
+                  <Switch
+                    id={`required-${key}`}
+                    checked={requiredFields[key] ?? false}
+                    onCheckedChange={(value: boolean) => handleRequiredFieldToggle(key, value)}
+                    disabled={isPending}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

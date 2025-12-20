@@ -173,6 +173,39 @@ export class OrganizationsController {
 
     return this.tenantsService.deleteOrganization(id, accountId);
   }
+
+  /**
+   * Get organization settings including required fields (owner only)
+   */
+  @Get(":id/settings")
+  async getSettings(@Param("id") id: string) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    return this.tenantsService.getOrganizationSettings(id, accountId);
+  }
+
+  /**
+   * Update organization settings including required fields (owner only)
+   */
+  @Patch(":id/settings")
+  async updateSettings(
+    @Param("id") id: string,
+    @Body() body: {
+      rankRequired?: boolean;
+      orgRequired?: boolean;
+      homeRequired?: boolean;
+    }
+  ) {
+    const accountId = this.requestContext.store?.accountId;
+    if (!accountId) {
+      throw new UnauthorizedException("Authentication required");
+    }
+
+    return this.tenantsService.updateOrganizationSettings(id, accountId, body);
+  }
 }
 
 /**
