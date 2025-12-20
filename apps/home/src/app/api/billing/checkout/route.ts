@@ -32,10 +32,6 @@ export async function POST(request: NextRequest) {
     }
 
     const priceId = PRICE_IDS[planId];
-    console.log("[checkout] planId:", planId);
-    console.log("[checkout] priceId:", priceId);
-    console.log("[checkout] STRIPE_SECRET_KEY prefix:", process.env.STRIPE_SECRET_KEY?.substring(0, 12));
-
     if (!priceId) {
       return NextResponse.json(
         { message: "Invalid plan selected" },
@@ -68,10 +64,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or retrieve Stripe customer
-    let customer: string;
+    let customer: string | undefined;
+
+    // Verify existing customer still exists in Stripe
     if (stripeCustomerId) {
-      customer = stripeCustomerId;
-    } else {
+      try {
+        await stripe.customers.retrieve(stripeCustomerId);
+        customer = stripeCustomerId;
+      } catch {
+        // Customer doesn't exist in Stripe (deleted or wrong mode)
+        console.log("[checkout] Stored customer not found in Stripe, creating new one");
+      }
+    }
+
+    // Create new customer if needed
+    if (!customer) {
       const newCustomer = await stripe.customers.create({
         email: claims?.email as string,
         name: organizationName,
@@ -82,7 +89,7 @@ export async function POST(request: NextRequest) {
       });
       customer = newCustomer.id;
 
-      // Update organization with Stripe customer ID via API
+      // Update organization with new Stripe customer ID via API
       if (accessToken) {
         try {
           await fetch(`${getApiBaseUrl()}/v1/organizations/${organizationId}/stripe-customer`, {
