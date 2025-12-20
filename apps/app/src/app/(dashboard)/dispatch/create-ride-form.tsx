@@ -150,14 +150,14 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
         <div className="space-y-2">
           <Label htmlFor="vanId">Assign Van</Label>
           <Select
-            value={formData.vanId}
-            onValueChange={(value: string) => setFormData({ ...formData, vanId: value })}
+            value={formData.vanId || "__unassigned__"}
+            onValueChange={(value: string) => setFormData({ ...formData, vanId: value === "__unassigned__" ? "" : value })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select van..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Unassigned</SelectItem>
+              <SelectItem value="__unassigned__">Unassigned</SelectItem>
               {availableVans.map((van) => (
                 <SelectItem key={van.id} value={van.id}>
                   {van.name}

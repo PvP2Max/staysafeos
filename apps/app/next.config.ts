@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.staysafeos.com",
       },
+      {
+        protocol: "https",
+        hostname: "imagedelivery.net",
+      },
     ],
   },
 };

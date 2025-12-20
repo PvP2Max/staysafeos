@@ -171,14 +171,14 @@ export function EditProfileDialog({
           <div className="space-y-2">
             <Label htmlFor="rank">Rank</Label>
             <Select
-              value={formData.rank}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, rank: value }))}
+              value={formData.rank || "__none__"}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, rank: value === "__none__" ? "" : value }))}
             >
               <SelectTrigger id="rank">
                 <SelectValue placeholder="Select rank..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {RANKS.map((rank) => (
                   <SelectItem key={rank} value={rank}>
                     {rank}
