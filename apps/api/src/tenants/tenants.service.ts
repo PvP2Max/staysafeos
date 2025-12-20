@@ -3,13 +3,41 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 import { CreateTenantDto } from "./dto/create-tenant.dto";
 import { GlobalStatsService } from "../global-stats/global-stats.service";
+import { LogtoManagementService } from "../auth/logto-management.service";
+
+// Reserved subdomains that cannot be used as tenant slugs
+const RESERVED_SLUGS = [
+  "www",
+  "api",
+  "app",
+  "auth",
+  "admin",
+  "proxy",
+  "mail",
+  "email",
+  "smtp",
+  "ftp",
+  "cdn",
+  "static",
+  "assets",
+  "docs",
+  "help",
+  "support",
+  "status",
+  "blog",
+  "dev",
+  "staging",
+  "test",
+  "demo",
+];
 
 @Injectable()
 export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly requestContext: RequestContextService,
-    private readonly globalStatsService: GlobalStatsService
+    private readonly globalStatsService: GlobalStatsService,
+    private readonly logtoManagement: LogtoManagementService
   ) {}
 
   /**
@@ -40,9 +68,14 @@ export class TenantsService {
   }
 
   /**
-   * Check if a slug is already taken
+   * Check if a slug is already taken or reserved
    */
   async slugExists(slug: string): Promise<boolean> {
+    // Check if reserved
+    if (RESERVED_SLUGS.includes(slug.toLowerCase())) {
+      return true;
+    }
+
     const org = await this.prisma.organization.findUnique({
       where: { slug },
       select: { id: true },
@@ -54,6 +87,11 @@ export class TenantsService {
    * Create a new tenant (organization) with the owner as EXECUTIVE
    */
   async create(dto: CreateTenantDto, ownerAccountId: string) {
+    // Check if slug is reserved
+    if (RESERVED_SLUGS.includes(dto.slug.toLowerCase())) {
+      throw new BadRequestException(`Slug "${dto.slug}" is reserved and cannot be used`);
+    }
+
     // Check if slug is already taken
     const exists = await this.slugExists(dto.slug);
     if (exists) {
@@ -61,7 +99,7 @@ export class TenantsService {
     }
 
     // Create organization with owner membership in a transaction
-    return this.prisma.$transaction(async (tx) => {
+    const org = await this.prisma.$transaction(async (tx) => {
       // Create default theme first
       const theme = await tx.theme.create({
         data: {
@@ -70,7 +108,7 @@ export class TenantsService {
       });
 
       // Create the organization with the theme
-      const org = await tx.organization.create({
+      const newOrg = await tx.organization.create({
         data: {
           name: dto.name,
           slug: dto.slug,
@@ -85,7 +123,7 @@ export class TenantsService {
       await tx.membership.create({
         data: {
           accountId: ownerAccountId,
-          organizationId: org.id,
+          organizationId: newOrg.id,
           role: "EXECUTIVE",
           status: "ACTIVE",
         },
@@ -94,12 +132,19 @@ export class TenantsService {
       // Create default settings
       await tx.organizationSettings.create({
         data: {
-          organizationId: org.id,
+          organizationId: newOrg.id,
         },
       });
 
-      return org;
+      return newOrg;
     });
+
+    // Register redirect URIs in Logto for the new subdomain (non-blocking)
+    this.logtoManagement.addSubdomainRedirectUris(dto.slug).catch((error) => {
+      console.error(`[tenants] Failed to register Logto redirect URIs for ${dto.slug}:`, error);
+    });
+
+    return org;
   }
 
   async findBySlug(slug: string) {
@@ -268,9 +313,14 @@ export class TenantsService {
       where: { id: orgId },
       select: {
         id: true,
+        slug: true,
         name: true,
         ownerAccountId: true,
         themeId: true,
+        domains: {
+          where: { verifiedAt: { not: null } },
+          select: { domain: true },
+        },
       },
     });
 
@@ -301,6 +351,17 @@ export class TenantsService {
         });
       }
     });
+
+    // Remove redirect URIs from Logto for subdomain and custom domains (non-blocking)
+    this.logtoManagement.removeSubdomainRedirectUris(org.slug).catch((error) => {
+      console.error(`[tenants] Failed to remove Logto redirect URIs for ${org.slug}:`, error);
+    });
+
+    for (const domain of org.domains) {
+      this.logtoManagement.removeCustomDomainRedirectUris(domain.domain).catch((error) => {
+        console.error(`[tenants] Failed to remove Logto redirect URIs for ${domain.domain}:`, error);
+      });
+    }
 
     return {
       success: true,

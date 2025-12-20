@@ -36,7 +36,7 @@ export class DnsVerificationService {
   private async verifyCnameRecord(domain: string): Promise<boolean> {
     try {
       const records = await dns.resolveCname(domain);
-      const expectedTarget = "app.staysafeos.com";
+      const expectedTarget = "proxy.staysafeos.com";
 
       // Check if any CNAME record points to our target
       const isValid = records.some(

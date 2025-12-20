@@ -206,7 +206,20 @@ Go to: `https://admin-auth.staysafeos.com`
 
 Enable Organizations feature in sidebar for multi-tenancy.
 
-## Step 8: Update Render Environment Variables
+## Step 8: Create Machine-to-Machine Application
+
+For automatic redirect URI management when tenants are created or custom domains are verified:
+
+1. In Logto Admin Console, go to **Applications**
+2. Click **Create Application** → **Machine-to-Machine**
+3. Name it: `StaySafeOS API M2M`
+4. After creation, go to **Machine-to-machine roles**
+5. Assign the **Logto Management API - All** role (or create a custom role with `all` scope on Management API)
+6. Note the **App ID** and **App Secret**
+
+Also note the **Application ID** of your "StaySafeOS App" application (the one users sign into).
+
+## Step 9: Update Render Environment Variables
 
 In Render dashboard, set for **staysafeos-home**:
 
@@ -226,6 +239,14 @@ For **staysafeos-api**:
 
 - `LOGTO_ENDPOINT`: `https://auth.staysafeos.com`
 - `LOGTO_AUDIENCE`: `https://api.staysafeos.com`
+- `LOGTO_M2M_APP_ID`: (from M2M app created in Step 8)
+- `LOGTO_M2M_APP_SECRET`: (from M2M app created in Step 8)
+- `LOGTO_APP_APPLICATION_ID`: (Application ID of StaySafeOS App - the user-facing app)
+
+The M2M credentials enable automatic redirect URI management:
+- When a new tenant is created, the subdomain callback is automatically registered
+- When a custom domain is verified, its callback is automatically registered
+- When a custom domain is deleted, its callback is automatically removed
 
 ## Maintenance
 

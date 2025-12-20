@@ -1,9 +1,12 @@
 import { getLogtoContext, signIn } from "@logto/next/server-actions";
 import { redirect } from "next/navigation";
-import { logtoConfig } from "@/lib/logto";
+import { getLogtoConfig } from "@/lib/logto";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@staysafeos/ui";
 
 export default async function AppIndexPage() {
+  // Get dynamic config based on current host
+  const logtoConfig = await getLogtoConfig();
+
   // Check if logged in
   const { isAuthenticated } = await getLogtoContext(logtoConfig);
 
@@ -22,7 +25,8 @@ export default async function AppIndexPage() {
           <form
             action={async () => {
               "use server";
-              await signIn(logtoConfig);
+              const config = await getLogtoConfig();
+              await signIn(config);
             }}
           >
             <Button type="submit" className="w-full" size="lg">

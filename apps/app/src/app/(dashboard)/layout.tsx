@@ -1,6 +1,6 @@
 import { getLogtoContext, signOut } from "@logto/next/server-actions";
 import { redirect } from "next/navigation";
-import { logtoConfig } from "@/lib/logto";
+import { getLogtoConfig } from "@/lib/logto";
 import { Button } from "@staysafeos/ui";
 import Link from "next/link";
 import { createApiClient } from "@/lib/api/client";
@@ -10,6 +10,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const logtoConfig = await getLogtoConfig();
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated) {
@@ -68,7 +69,8 @@ export default async function DashboardLayout({
             <form
               action={async () => {
                 "use server";
-                await signOut(logtoConfig);
+                const config = await getLogtoConfig();
+                await signOut(config);
               }}
             >
               <Button variant="ghost" size="sm" type="submit">

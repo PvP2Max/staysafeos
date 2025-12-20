@@ -8,6 +8,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 import { DnsVerificationService } from "./dns-verification.service";
+import { LogtoManagementService } from "../auth/logto-management.service";
 import { randomBytes } from "crypto";
 
 export interface CreateDomainInput {
@@ -35,7 +36,8 @@ export class DomainsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly requestContext: RequestContextService,
-    private readonly dnsVerification: DnsVerificationService
+    private readonly dnsVerification: DnsVerificationService,
+    private readonly logtoManagement: LogtoManagementService
   ) {}
 
   private getTenantId(): string {
@@ -163,6 +165,11 @@ export class DomainsService {
       data: { verifiedAt: new Date() },
     });
 
+    // Register redirect URIs in Logto for the custom domain (non-blocking)
+    this.logtoManagement.addCustomDomainRedirectUris(domain.domain).catch((error) => {
+      console.error(`[domains] Failed to register Logto redirect URIs for ${domain.domain}:`, error);
+    });
+
     return this.toDomainWithDnsRecords(updatedDomain);
   }
 
@@ -214,6 +221,13 @@ export class DomainsService {
     }
 
     await this.prisma.domain.delete({ where: { id } });
+
+    // Remove redirect URIs from Logto if domain was verified (non-blocking)
+    if (domain.verifiedAt) {
+      this.logtoManagement.removeCustomDomainRedirectUris(domain.domain).catch((error) => {
+        console.error(`[domains] Failed to remove Logto redirect URIs for ${domain.domain}:`, error);
+      });
+    }
   }
 
   // Public method for tenant resolution (used by App)
@@ -259,7 +273,7 @@ export class DomainsService {
         {
           type: "CNAME",
           name: domain.domain,
-          value: "app.staysafeos.com",
+          value: "proxy.staysafeos.com",
           status: isVerified ? "verified" : "pending",
         },
         {

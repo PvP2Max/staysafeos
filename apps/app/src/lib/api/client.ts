@@ -3,7 +3,7 @@
  */
 
 import { getLogtoContext } from "@logto/next/server-actions";
-import { logtoConfig } from "@/lib/logto";
+import { getLogtoConfig } from "@/lib/logto";
 import type { Ride, Van, AnalyticsSummary, TrainingModule, TrainingProgress, Shift, VanTransfer, VanTask, Membership } from "./types";
 
 const API_BASE_URL = process.env.API_URL || "https://api.staysafeos.com";
@@ -304,6 +304,7 @@ export class ApiClient {
  * Create authenticated API client from Logto session
  */
 export async function createApiClient(): Promise<ApiClient> {
+  const logtoConfig = await getLogtoConfig();
   const { isAuthenticated, accessToken, claims } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated || !accessToken) {

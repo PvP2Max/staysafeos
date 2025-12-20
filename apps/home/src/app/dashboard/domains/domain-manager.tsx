@@ -55,6 +55,25 @@ export function DomainManager({ domains: initialDomains, canAddDomains }: Domain
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
   const [deletingDomain, setDeletingDomain] = useState<Domain | null>(null);
   const [message, setMessage] = useState("");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, fieldId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldId);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopiedField(fieldId);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
+  };
 
   const handleAddDomain = () => {
     if (!newDomain.trim()) return;
@@ -286,16 +305,44 @@ export function DomainManager({ domains: initialDomains, canAddDomains }: Domain
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <p className="text-muted-foreground">Name</p>
-                                <p className="font-mono bg-muted px-2 py-1 rounded break-all">
-                                  {record.name}
-                                </p>
+                                <p className="text-muted-foreground mb-1">Name</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-mono bg-muted px-2 py-1 rounded break-all flex-1">
+                                    {record.name}
+                                  </p>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 shrink-0"
+                                    onClick={() => copyToClipboard(record.name, `${domain.id}-name-${idx}`)}
+                                  >
+                                    {copiedField === `${domain.id}-name-${idx}` ? (
+                                      <CheckIcon className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <CopyIcon className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
                               <div>
-                                <p className="text-muted-foreground">Value</p>
-                                <p className="font-mono bg-muted px-2 py-1 rounded break-all">
-                                  {record.value}
-                                </p>
+                                <p className="text-muted-foreground mb-1">Value</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-mono bg-muted px-2 py-1 rounded break-all flex-1">
+                                    {record.value}
+                                  </p>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 shrink-0"
+                                    onClick={() => copyToClipboard(record.value, `${domain.id}-value-${idx}`)}
+                                  >
+                                    {copiedField === `${domain.id}-value-${idx}` ? (
+                                      <CheckIcon className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <CopyIcon className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -384,5 +431,26 @@ export function DomainManager({ domains: initialDomains, canAddDomains }: Domain
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function CopyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    </svg>
   );
 }

@@ -1,10 +1,11 @@
 import { createApiClient } from "@/lib/api/client";
 import { getLogtoContext } from "@logto/next/server-actions";
 import { redirect } from "next/navigation";
-import { logtoConfig } from "@/lib/logto";
+import { getLogtoConfig } from "@/lib/logto";
 import { DriverConsole } from "./driver-console";
 
 export default async function DriverPage() {
+  const logtoConfig = await getLogtoConfig();
   const { isAuthenticated } = await getLogtoContext(logtoConfig);
 
   if (!isAuthenticated) {

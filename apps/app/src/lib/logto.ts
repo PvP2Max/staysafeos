@@ -1,10 +1,12 @@
 import { LogtoNextConfig } from "@logto/next";
+import { headers } from "next/headers";
 
 // Use placeholder values during build, actual values at runtime
 const endpoint = process.env.LOGTO_ENDPOINT || "https://placeholder.logto.app";
 const appId = process.env.LOGTO_APP_ID || "placeholder";
 const appSecret = process.env.LOGTO_APP_SECRET || "placeholder";
 
+// Static config for non-request contexts (build time, etc.)
 export const logtoConfig: LogtoNextConfig = {
   endpoint,
   appId,
@@ -17,6 +19,22 @@ export const logtoConfig: LogtoNextConfig = {
     ? [process.env.LOGTO_API_RESOURCE]
     : undefined,
 };
+
+/**
+ * Get logto config with dynamic baseUrl based on current request host.
+ * Use this in server actions and route handlers for multi-tenant support.
+ */
+export async function getLogtoConfig(): Promise<LogtoNextConfig> {
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3001";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const baseUrl = `${protocol}://${host}`;
+
+  return {
+    ...logtoConfig,
+    baseUrl,
+  };
+}
 
 // Validate at runtime (not build time)
 export function validateLogtoConfig() {

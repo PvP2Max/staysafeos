@@ -1,6 +1,6 @@
 import { getLogtoContext, signOut } from "@logto/next/server-actions";
 import { redirect } from "next/navigation";
-import { logtoConfig } from "@/lib/logto";
+import { getLogtoConfig } from "@/lib/logto";
 import { Button } from "@staysafeos/ui";
 
 export const metadata = {
@@ -9,6 +9,7 @@ export const metadata = {
 };
 
 export default async function NoMembershipPage() {
+  const logtoConfig = await getLogtoConfig();
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
 
   // If not authenticated, redirect to home
@@ -68,7 +69,8 @@ export default async function NoMembershipPage() {
           <form
             action={async () => {
               "use server";
-              await signOut(logtoConfig);
+              const config = await getLogtoConfig();
+              await signOut(config);
             }}
           >
             <Button type="submit" variant="outline" className="w-full">
