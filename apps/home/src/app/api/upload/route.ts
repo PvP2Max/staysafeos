@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLogtoContext } from "@logto/next/server-actions";
 import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
-import { uploadImage, validateImageFile, IMAGE_PRESETS } from "@/lib/r2/client";
+import { uploadImage, validateImageFile, type ImageType } from "@/lib/r2/client";
 
 // Force runtime evaluation
 export const dynamic = "force-dynamic";
@@ -72,7 +72,8 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!type || !(type in IMAGE_PRESETS)) {
+    const validTypes: ImageType[] = ["logo", "favicon"];
+    if (!type || !validTypes.includes(type as ImageType)) {
       return NextResponse.json(
         { error: "Invalid image type. Must be 'logo' or 'favicon'" },
         { status: 400 }
@@ -88,11 +89,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Upload to R2
+    // Upload to Cloudflare Images
     const url = await uploadImage(
       file,
       organizationId,
-      type as keyof typeof IMAGE_PRESETS
+      type as ImageType
     );
 
     return NextResponse.json({ url });

@@ -1,112 +1,124 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import sharp from "sharp";
-
-// R2 configuration from environment variables
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "staysafeos-assets";
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!; // e.g., https://pub-xxx.r2.dev
-
-// Image dimension presets
-export const IMAGE_PRESETS = {
-  logo: { width: 400, height: 100, format: "png" as const },
-  favicon: { width: 32, height: 32, format: "png" as const },
-} as const;
-
-type ImageType = keyof typeof IMAGE_PRESETS;
-
-// Create S3 client configured for R2
-function getR2Client(): S3Client {
-  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-    throw new Error("R2 credentials not configured");
-  }
-
-  return new S3Client({
-    region: "auto",
-    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY,
-    },
-  });
-}
-
 /**
- * Process and resize an image to the specified dimensions
+ * Cloudflare Images client for uploading and serving organization branding assets.
+ *
+ * Cloudflare Images handles resizing automatically via variants.
+ * We define variants for logo and favicon sizes.
  */
-async function processImage(
-  buffer: Buffer,
-  type: ImageType
-): Promise<Buffer> {
-  const preset = IMAGE_PRESETS[type];
 
-  let processor = sharp(buffer);
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID!;
+const CF_IMAGES_TOKEN = process.env.CF_IMAGES_TOKEN!;
 
-  // For logos, resize to fit within bounds while maintaining aspect ratio
-  if (type === "logo") {
-    processor = processor.resize(preset.width, preset.height, {
-      fit: "inside",
-      withoutEnlargement: true,
-    });
-  } else {
-    // For favicons, resize to exact dimensions (square)
-    processor = processor.resize(preset.width, preset.height, {
-      fit: "cover",
-      position: "center",
-    });
-  }
+// Cloudflare Images API endpoint
+const CF_IMAGES_API = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/images/v1`;
 
-  // Convert to PNG with transparency support
-  return processor.png({ quality: 90 }).toBuffer();
-}
+// Image type definitions (for organizing uploads)
+export type ImageType = "logo" | "favicon";
 
 /**
- * Upload an image to R2 with automatic resizing
+ * Upload an image to Cloudflare Images
+ *
+ * @param file - The image file to upload
+ * @param organizationId - Organization ID for namespacing
+ * @param type - Image type (logo or favicon)
+ * @returns The Cloudflare Images delivery URL
  */
 export async function uploadImage(
   file: File,
   organizationId: string,
   type: ImageType
 ): Promise<string> {
-  const client = getR2Client();
-
-  // Read file as buffer
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  // Process and resize the image
-  const processedBuffer = await processImage(buffer, type);
-
-  // Generate unique filename
-  const timestamp = Date.now();
-  const key = `organizations/${organizationId}/${type}-${timestamp}.png`;
-
-  // Upload to R2
-  const command = new PutObjectCommand({
-    Bucket: R2_BUCKET_NAME,
-    Key: key,
-    Body: processedBuffer,
-    ContentType: "image/png",
-    CacheControl: "public, max-age=31536000", // Cache for 1 year
-  });
-
-  await client.send(command);
-
-  // Return the public URL
-  if (!R2_PUBLIC_URL) {
-    throw new Error("R2_PUBLIC_URL not configured");
+  if (!CF_ACCOUNT_ID || !CF_IMAGES_TOKEN) {
+    throw new Error("Cloudflare Images credentials not configured");
   }
 
-  return `${R2_PUBLIC_URL}/${key}`;
+  // Create form data for the upload
+  const formData = new FormData();
+  formData.append("file", file);
+
+  // Add metadata for organization and type
+  formData.append("metadata", JSON.stringify({
+    organizationId,
+    type,
+    uploadedAt: new Date().toISOString(),
+  }));
+
+  // Set a custom ID for easier management
+  const customId = `${organizationId}/${type}-${Date.now()}`;
+  formData.append("id", customId);
+
+  // Upload to Cloudflare Images
+  const response = await fetch(CF_IMAGES_API, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${CF_IMAGES_TOKEN}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.error("[cloudflare-images] Upload failed:", error);
+    throw new Error(error.errors?.[0]?.message || "Failed to upload image");
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.errors?.[0]?.message || "Upload failed");
+  }
+
+  // Return the delivery URL with the appropriate variant
+  // Cloudflare Images URL format: https://imagedelivery.net/{account_hash}/{image_id}/{variant}
+  // We'll use the "public" variant which serves the original
+  const imageId = result.result.id;
+  const variants = result.result.variants;
+
+  // Return the first variant URL (usually the public one)
+  // The URL format includes the variant name at the end
+  if (variants && variants.length > 0) {
+    return variants[0];
+  }
+
+  // Fallback: construct URL from result
+  return `https://imagedelivery.net/${CF_ACCOUNT_ID}/${imageId}/public`;
+}
+
+/**
+ * Delete an image from Cloudflare Images
+ *
+ * @param imageId - The Cloudflare Images ID to delete
+ */
+export async function deleteImage(imageId: string): Promise<void> {
+  if (!CF_ACCOUNT_ID || !CF_IMAGES_TOKEN) {
+    throw new Error("Cloudflare Images credentials not configured");
+  }
+
+  const response = await fetch(`${CF_IMAGES_API}/${imageId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${CF_IMAGES_TOKEN}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.error("[cloudflare-images] Delete failed:", error);
+    // Don't throw on delete failures - image may already be deleted
+  }
 }
 
 /**
  * Validate that an uploaded file is a valid image
  */
 export function validateImageFile(file: File): { valid: boolean; error?: string } {
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  const allowedTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
+  const maxSize = 10 * 1024 * 1024; // 10MB (Cloudflare Images limit)
+  const allowedTypes = [
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+  ];
 
   if (!allowedTypes.includes(file.type)) {
     return {
@@ -118,9 +130,30 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
   if (file.size > maxSize) {
     return {
       valid: false,
-      error: "File too large. Maximum size is 5MB.",
+      error: "File too large. Maximum size is 10MB.",
     };
   }
 
   return { valid: true };
+}
+
+/**
+ * Get the variant URL for an image
+ *
+ * Cloudflare Images supports variants for different sizes:
+ * - "public" - Original image
+ * - "logo" - 400x100 fit
+ * - "favicon" - 32x32 cover
+ *
+ * Note: You need to create these variants in the Cloudflare dashboard:
+ * 1. Go to Images > Variants
+ * 2. Create "logo" variant: Fit within 400x100
+ * 3. Create "favicon" variant: Cover 32x32
+ */
+export function getVariantUrl(baseUrl: string, variant: ImageType): string {
+  // Replace the variant name in the URL
+  // URL format: https://imagedelivery.net/{hash}/{id}/{variant}
+  const parts = baseUrl.split("/");
+  parts[parts.length - 1] = variant;
+  return parts.join("/");
 }

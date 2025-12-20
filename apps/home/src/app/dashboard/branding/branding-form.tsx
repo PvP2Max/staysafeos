@@ -180,7 +180,7 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  PNG, JPEG, GIF, WebP, or SVG. Max 5MB. Will be resized to 400x100px.
+                  PNG, JPEG, GIF, WebP, or SVG. Max 10MB.
                 </p>
                 {formData.logoUrl && (
                   <Button
@@ -240,7 +240,7 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  PNG, ICO, or other image format. Max 5MB. Will be resized to 32x32px.
+                  PNG, ICO, or other image format. Max 10MB.
                 </p>
                 {formData.faviconUrl && (
                   <Button
