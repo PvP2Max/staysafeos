@@ -2,38 +2,31 @@ import { createApiClient } from "@/lib/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from "@staysafeos/ui";
 import Link from "next/link";
 
-export default async function TrainingPage() {
-  let modules: Array<{
-    id: string;
-    title: string;
-    description?: string;
-    category: string;
-    videoDuration?: number;
-    requiredRoles: string[];
-    sortOrder: number;
-  }> = [];
-
-  let progress: Array<{
-    moduleId: string;
-    videoWatched: boolean;
-    quizPassed: boolean;
+interface ModuleWithCompletion {
+  id: string;
+  title: string;
+  description?: string;
+  category: string;
+  videoDuration?: number;
+  requiredRoles: string[];
+  sortOrder: number;
+  completion?: {
+    videoWatchedAt?: string;
+    passed?: boolean;
     quizScore?: number;
     completedAt?: string;
-  }> = [];
+  } | null;
+}
+
+export default async function TrainingPage() {
+  let modules: ModuleWithCompletion[] = [];
 
   try {
     const api = await createApiClient();
-    const [modulesResult, progressResult] = await Promise.all([
-      api.getTrainingModules(),
-      api.getMyProgress(),
-    ]);
-    modules = modulesResult;
-    progress = progressResult;
+    modules = await api.getTrainingModules();
   } catch {
     // Use empty if API fails
   }
-
-  const progressMap = new Map(progress.map((p) => [p.moduleId, p]));
 
   const categories = ["ORIENTATION", "SAFETY", "DRIVER", "TC", "DISPATCHER"];
   const modulesByCategory = categories.reduce((acc, cat) => {
@@ -41,7 +34,7 @@ export default async function TrainingPage() {
     return acc;
   }, {} as Record<string, typeof modules>);
 
-  const completedCount = progress.filter((p) => p.quizPassed).length;
+  const completedCount = modules.filter((m) => m.completion?.passed).length;
   const totalCount = modules.length;
 
   return (
@@ -79,9 +72,9 @@ export default async function TrainingPage() {
             <h2 className="text-xl font-semibold mb-4">{category}</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {categoryModules.map((module) => {
-                const moduleProgress = progressMap.get(module.id);
-                const isCompleted = moduleProgress?.quizPassed;
-                const inProgress = moduleProgress?.videoWatched && !moduleProgress?.quizPassed;
+                const completion = module.completion;
+                const isCompleted = completion?.passed;
+                const inProgress = completion?.videoWatchedAt && !completion?.passed;
 
                 return (
                   <Card key={module.id} className={isCompleted ? "border-green-200 bg-green-50" : ""}>

@@ -90,6 +90,36 @@ export class TenantsController {
   }
 
   /**
+   * Get members for current tenant
+   */
+  @Get("current/members")
+  async getCurrentMembers(
+    @Query("search") search?: string,
+    @Query("role") role?: string
+  ) {
+    return this.tenantsService.getCurrentOrgMembers({ search, role });
+  }
+
+  /**
+   * Update member role
+   */
+  @Patch("current/members/:membershipId/role")
+  async updateMemberRole(
+    @Param("membershipId") membershipId: string,
+    @Body() body: { role: string }
+  ) {
+    return this.tenantsService.updateMemberRole(membershipId, body.role);
+  }
+
+  /**
+   * Remove member from organization
+   */
+  @Delete("current/members/:membershipId")
+  async removeMember(@Param("membershipId") membershipId: string) {
+    return this.tenantsService.removeMember(membershipId);
+  }
+
+  /**
    * Update Stripe customer ID for an organization
    */
   @Patch(":id/stripe-customer")

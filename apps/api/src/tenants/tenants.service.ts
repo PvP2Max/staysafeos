@@ -539,4 +539,144 @@ export class TenantsService {
       archivedStats,
     };
   }
+
+  /**
+   * Get members for the current organization
+   */
+  async getCurrentOrgMembers(params?: { search?: string; role?: string }) {
+    const org = this.requestContext.requireOrganization();
+
+    const where: any = {
+      organizationId: org.id,
+      status: "ACTIVE",
+    };
+
+    if (params?.role) {
+      where.role = params.role;
+    }
+
+    if (params?.search) {
+      where.account = {
+        OR: [
+          { email: { contains: params.search, mode: "insensitive" } },
+          { firstName: { contains: params.search, mode: "insensitive" } },
+          { lastName: { contains: params.search, mode: "insensitive" } },
+        ],
+      };
+    }
+
+    const [members, total] = await Promise.all([
+      this.prisma.membership.findMany({
+        where,
+        include: {
+          account: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+        },
+        orderBy: [
+          { role: "asc" },
+          { account: { lastName: "asc" } },
+        ],
+      }),
+      this.prisma.membership.count({ where }),
+    ]);
+
+    return { data: members, total };
+  }
+
+  /**
+   * Update member role (admin/exec only)
+   */
+  async updateMemberRole(membershipId: string, role: string) {
+    const org = this.requestContext.requireOrganization();
+    const currentMembership = this.requestContext.store?.membership;
+
+    if (!currentMembership || !["EXECUTIVE", "ADMIN"].includes(currentMembership.role)) {
+      throw new ForbiddenException("Only executives and admins can update roles");
+    }
+
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        id: membershipId,
+        organizationId: org.id,
+      },
+    });
+
+    if (!membership) {
+      throw new NotFoundException("Member not found");
+    }
+
+    // Can't change own role (except demoting self)
+    if (membership.id === currentMembership.id && role !== "RIDER") {
+      throw new ForbiddenException("Cannot promote yourself");
+    }
+
+    // Only executives can create other executives
+    if (role === "EXECUTIVE" && currentMembership.role !== "EXECUTIVE") {
+      throw new ForbiddenException("Only executives can promote to executive");
+    }
+
+    return this.prisma.membership.update({
+      where: { id: membershipId },
+      data: { role },
+      include: {
+        account: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Remove member from organization (admin/exec only)
+   */
+  async removeMember(membershipId: string) {
+    const org = this.requestContext.requireOrganization();
+    const currentMembership = this.requestContext.store?.membership;
+
+    if (!currentMembership || !["EXECUTIVE", "ADMIN"].includes(currentMembership.role)) {
+      throw new ForbiddenException("Only executives and admins can remove members");
+    }
+
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        id: membershipId,
+        organizationId: org.id,
+      },
+      include: { organization: { select: { ownerAccountId: true } } },
+    });
+
+    if (!membership) {
+      throw new NotFoundException("Member not found");
+    }
+
+    // Can't remove yourself
+    if (membership.id === currentMembership.id) {
+      throw new ForbiddenException("Cannot remove yourself");
+    }
+
+    // Can't remove the org owner
+    if (membership.accountId === membership.organization.ownerAccountId) {
+      throw new ForbiddenException("Cannot remove the organization owner");
+    }
+
+    // Soft delete - set status to INACTIVE
+    await this.prisma.membership.update({
+      where: { id: membershipId },
+      data: { status: "INACTIVE" },
+    });
+
+    return { success: true };
+  }
 }
