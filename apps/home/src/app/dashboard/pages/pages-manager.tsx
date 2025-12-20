@@ -57,8 +57,9 @@ export function PagesManager({
   const [message, setMessage] = useState("");
 
   // Check if can create more pages
+  // Free/Starter (pageBuilderLevel === "none") cannot create any pages
   const hasLandingPage = pages.some((p) => p.isLandingPage);
-  const canCreatePage = canCreateMultiplePages || pages.length === 0 || (pageBuilderLevel !== "none" && !hasLandingPage);
+  const canCreatePage = pageBuilderLevel !== "none" && (canCreateMultiplePages || !hasLandingPage);
 
   const handleCreate = () => {
     if (!newPage.slug || !newPage.title) return;
@@ -221,37 +222,46 @@ export function PagesManager({
                     <p className="text-sm text-muted-foreground">/{page.slug}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Link href={`/dashboard/pages/${page.id}`}>
-                      <Button variant="default" size="sm">
-                        Edit Content
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => togglePublished(page)}
-                      disabled={isPending}
-                    >
-                      {page.published ? "Unpublish" : "Publish"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingPage(page);
-                        setEditTitle(page.title);
-                      }}
-                    >
-                      Rename
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => setDeletingPage(page)}
-                    >
-                      Delete
-                    </Button>
+                    {pageBuilderLevel !== "none" && (
+                      <>
+                        <Link href={`/dashboard/pages/${page.id}`}>
+                          <Button variant="default" size="sm">
+                            Edit Content
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => togglePublished(page)}
+                          disabled={isPending}
+                        >
+                          {page.published ? "Unpublish" : "Publish"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingPage(page);
+                            setEditTitle(page.title);
+                          }}
+                        >
+                          Rename
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => setDeletingPage(page)}
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    )}
+                    {pageBuilderLevel === "none" && (
+                      <span className="text-sm text-muted-foreground">
+                        Upgrade to edit
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
