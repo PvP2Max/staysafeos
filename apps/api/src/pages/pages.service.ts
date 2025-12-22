@@ -4,6 +4,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 import { getTemplateWithBranding } from "../tenants/templates/landing-page";
 
+// Helper for setting JSON fields to null in Prisma
+const JsonNull = Prisma.JsonNull;
+
 // Editor types supported
 export type EditorType = "tiptap" | "grapesjs";
 
@@ -240,8 +243,8 @@ export class PagesService {
         editorType: "grapesjs",
         htmlContent: template.html,
         cssContent: template.css,
-        gjsComponents: null, // Clear GrapesJS data so it re-parses from HTML
-        gjsStyles: null,
+        gjsComponents: JsonNull, // Clear GrapesJS data so it re-parses from HTML
+        gjsStyles: JsonNull,
       },
     });
   }
