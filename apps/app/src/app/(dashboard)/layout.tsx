@@ -6,6 +6,9 @@ import { getTenantFromRequest } from "@/lib/tenant";
 import { DashboardShell } from "@/components/navigation";
 import { ProfileCompletionWrapper } from "@/components/profile-completion-wrapper";
 
+// Prevent caching - always fetch fresh data
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
