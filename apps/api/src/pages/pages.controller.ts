@@ -36,8 +36,8 @@ export class PagesController {
   @Get(":id")
   @UseGuards(LogtoAuthGuard)
   async getPageById(@Param("id") id: string) {
-    // Check if it looks like a UUID (page id) vs org slug
-    if (this.isUuid(id)) {
+    // Check if it looks like a page ID (UUID or CUID) vs org slug
+    if (this.isPageId(id)) {
       return this.pagesService.findByIdForCurrentTenant(id);
     }
     // Fall through to public route behavior
@@ -82,9 +82,12 @@ export class PagesController {
     return this.pagesService.findByOrgAndSlug(orgId, slug);
   }
 
-  // Helper to detect UUID format
-  private isUuid(str: string): boolean {
+  // Helper to detect page ID format (UUID or CUID)
+  private isPageId(str: string): boolean {
+    // UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
+    // CUID format (25 chars, starts with 'c', alphanumeric)
+    const cuidRegex = /^c[a-z0-9]{24}$/;
+    return uuidRegex.test(str) || cuidRegex.test(str);
   }
 }

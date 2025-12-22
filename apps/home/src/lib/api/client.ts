@@ -455,7 +455,6 @@ export async function createApiClient(): Promise<ApiClient> {
   // Check for selected org in cookie first
   const cookieStore = await cookies();
   const selectedOrgId = cookieStore.get("staysafeos_current_org")?.value;
-  console.log(`[api-client] selectedOrgId from cookie: ${selectedOrgId}`);
 
   let tenantId: string | undefined = selectedOrgId;
 
@@ -474,14 +473,11 @@ export async function createApiClient(): Promise<ApiClient> {
         const ownedTenants = me.ownedTenants as Array<{ id: string }> | undefined;
         const membership = me.membership as { tenantId: string } | undefined;
         tenantId = ownedTenants?.[0]?.id || membership?.tenantId;
-        console.log(`[api-client] Fetched tenantId from /v1/me: ${tenantId}`);
       }
-    } catch (error) {
-      console.log(`[api-client] Failed to fetch tenant from /v1/me:`, error);
+    } catch {
       // If we can't fetch, proceed without tenant context
     }
   }
 
-  console.log(`[api-client] Final tenantId: ${tenantId}`);
   return new ApiClient(accessToken, tenantId);
 }
