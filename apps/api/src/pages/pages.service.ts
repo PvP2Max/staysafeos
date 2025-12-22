@@ -211,13 +211,18 @@ export class PagesService {
 
   async resetPageToTemplate(id: string) {
     const tenantId = this.getTenantId();
+    console.log(`[pages] resetPageToTemplate called with id=${id}, tenantId=${tenantId}`);
+
     const page = await this.prisma.page.findUnique({ where: { id } });
+    console.log(`[pages] Found page:`, page ? { id: page.id, orgId: page.organizationId, slug: page.slug } : null);
 
     if (!page) {
+      console.log(`[pages] Page not found for id=${id}`);
       throw new NotFoundException("Page not found");
     }
 
     if (page.organizationId !== tenantId) {
+      console.log(`[pages] Tenant mismatch: page.orgId=${page.organizationId}, request.tenantId=${tenantId}`);
       throw new ForbiddenException("Page does not belong to your organization");
     }
 
