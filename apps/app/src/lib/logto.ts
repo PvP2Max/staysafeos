@@ -12,7 +12,7 @@ export const logtoConfig: LogtoNextConfig = {
   endpoint,
   appId,
   appSecret,
-  baseUrl: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001",
+  baseUrl: process.env.NEXT_PUBLIC_BASE_URL || "https://app.staysafeos.com",
   cookieSecret: process.env.LOGTO_COOKIE_SECRET || "complex_password_at_least_32_characters_long",
   cookieSecure: process.env.NODE_ENV === "production",
   scopes: ["openid", "profile", "email", "organizations"],
@@ -27,7 +27,7 @@ export const logtoConfig: LogtoNextConfig = {
  */
 export async function getLogtoConfig(): Promise<LogtoNextConfig> {
   const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3001";
+  const host = headersList.get("host") || "app.staysafeos.com";
   const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
   const baseUrl = `${protocol}://${host}`;
 

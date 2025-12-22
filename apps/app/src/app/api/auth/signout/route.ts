@@ -5,25 +5,22 @@ import { getLogtoConfig } from "@/lib/logto";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
+  // Get the external host for redirects (Render uses internal ports like 10000)
+  const headersList = await headers();
+  const host = headersList.get("host") || "app.staysafeos.com";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const baseUrl = `${protocol}://${host}`;
+
   try {
     const config = await getLogtoConfig();
 
-    // Get the current host to redirect back to after signout
-    const headersList = await headers();
-    const host = headersList.get("host") || "localhost:3001";
-    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-    const postLogoutRedirectUri = `${protocol}://${host}`;
-
-    await signOut(config, postLogoutRedirectUri);
+    await signOut(config, baseUrl);
     // signOut will redirect, so this won't be reached
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/", baseUrl));
   } catch (error) {
     console.error("[api/auth/signout] Error:", error);
     // Redirect to current domain's root on error
-    const headersList = await headers();
-    const host = headersList.get("host") || "localhost:3001";
-    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-    return NextResponse.redirect(new URL(`${protocol}://${host}/`));
+    return NextResponse.redirect(new URL("/", baseUrl));
   }
 }
