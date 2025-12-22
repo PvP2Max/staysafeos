@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/commo
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
+import { getTemplateWithBranding } from "../tenants/templates/landing-page";
 
 // Editor types supported
 export type EditorType = "tiptap" | "grapesjs";
@@ -203,5 +204,45 @@ export class PagesService {
     }
 
     return this.prisma.page.delete({ where: { id } });
+  }
+
+  async resetPageToTemplate(id: string) {
+    const tenantId = this.getTenantId();
+    const page = await this.prisma.page.findUnique({ where: { id } });
+
+    if (!page) {
+      throw new NotFoundException("Page not found");
+    }
+
+    if (page.organizationId !== tenantId) {
+      throw new ForbiddenException("Page does not belong to your organization");
+    }
+
+    // Get org info for template branding
+    const org = await this.prisma.organization.findUnique({
+      where: { id: tenantId },
+      include: { theme: true },
+    });
+
+    if (!org) {
+      throw new NotFoundException("Organization not found");
+    }
+
+    const template = getTemplateWithBranding(
+      org.name,
+      org.theme?.logoUrl,
+      org.theme?.primaryColor
+    );
+
+    return this.prisma.page.update({
+      where: { id },
+      data: {
+        editorType: "grapesjs",
+        htmlContent: template.html,
+        cssContent: template.css,
+        gjsComponents: null, // Clear GrapesJS data so it re-parses from HTML
+        gjsStyles: null,
+      },
+    });
   }
 }

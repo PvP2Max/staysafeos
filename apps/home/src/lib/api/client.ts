@@ -236,6 +236,18 @@ export class ApiClient {
     });
   }
 
+  async resetPageToTemplate(id: string) {
+    return this.fetch<{
+      id: string;
+      slug: string;
+      title: string;
+      htmlContent: string;
+      cssContent: string;
+    }>(`/v1/pages/${id}/reset-template`, {
+      method: "POST",
+    });
+  }
+
   // Analytics endpoints
   async getAnalyticsSummary() {
     return this.fetch<{

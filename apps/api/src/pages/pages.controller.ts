@@ -58,6 +58,13 @@ export class PagesController {
     return this.pagesService.deletePageById(id);
   }
 
+  @Post(":id/reset-template")
+  @UseGuards(LogtoAuthGuard)
+  @Roles("EXECUTIVE", "ADMIN")
+  async resetPageToTemplate(@Param("id") id: string) {
+    return this.pagesService.resetPageToTemplate(id);
+  }
+
   // ============================================
   // Public endpoints (for public page access)
   // Uses orgId/slug in URL path

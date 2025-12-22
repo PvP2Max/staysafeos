@@ -375,21 +375,22 @@ export class TenantsService {
       where: { organizationId: orgId, slug: "home" },
     });
 
+    // Get org info for template branding
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      include: { theme: true },
+    });
+
+    if (!org) return;
+
+    const template = getTemplateWithBranding(
+      org.name,
+      org.theme?.logoUrl,
+      org.theme?.primaryColor
+    );
+
     if (!existing) {
       // Create from template
-      const org = await this.prisma.organization.findUnique({
-        where: { id: orgId },
-        include: { theme: true },
-      });
-
-      if (!org) return;
-
-      const template = getTemplateWithBranding(
-        org.name,
-        org.theme?.logoUrl,
-        org.theme?.primaryColor
-      );
-
       await this.prisma.page.create({
         data: {
           organizationId: orgId,
@@ -402,12 +403,27 @@ export class TenantsService {
           published: true,
         },
       });
-    } else if (!existing.published) {
-      // Re-publish existing page (was soft-deleted on downgrade)
+    } else {
+      // Update existing page - populate with template if empty, or just re-publish
+      const needsTemplate = !existing.htmlContent || existing.htmlContent.trim() === "";
+
       await this.prisma.page.update({
         where: { id: existing.id },
-        data: { published: true },
+        data: {
+          published: true,
+          editorType: "grapesjs",
+          isLandingPage: true,
+          // Only populate template content if the page is empty
+          ...(needsTemplate && {
+            htmlContent: template.html,
+            cssContent: template.css,
+          }),
+        },
       });
+
+      if (needsTemplate) {
+        console.log(`[tenants] Populated empty home page with template for org ${orgId}`);
+      }
     }
   }
 

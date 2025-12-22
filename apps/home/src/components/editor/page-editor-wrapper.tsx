@@ -3,7 +3,8 @@
 import { useState, useTransition, useCallback, useEffect } from "react";
 import { Button, Badge } from "@staysafeos/ui";
 import { GrapesJSEditor, type PageBuilderLevel } from "./grapesjs-editor";
-import { updateGrapesJSContent, togglePagePublished } from "@/lib/api/actions";
+import { updateGrapesJSContent, togglePagePublished, resetPageToTemplate } from "@/lib/api/actions";
+import { useRouter } from "next/navigation";
 
 interface PageData {
   id: string;
@@ -29,11 +30,13 @@ export function PageEditorWrapper({
   pageBuilderLevel,
   canEditFooter,
 }: PageEditorWrapperProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [message, setMessage] = useState("");
   const [isPublished, setIsPublished] = useState(page.published);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // GrapesJS content state - all pages use GrapesJS now
   const [gjsData, setGjsData] = useState<{
@@ -82,6 +85,21 @@ export function PageEditorWrapper({
       }
     });
   }, [page.id, isPublished]);
+
+  // Reset to template
+  const handleResetToTemplate = useCallback(() => {
+    startTransition(async () => {
+      try {
+        await resetPageToTemplate(page.id);
+        setMessage("Page reset to template!");
+        setShowResetConfirm(false);
+        // Refresh the page to get new content
+        router.refresh();
+      } catch {
+        setMessage("Failed to reset page");
+      }
+    });
+  }, [page.id, router]);
 
   // Keyboard shortcut for save
   useEffect(() => {
@@ -134,16 +152,48 @@ export function PageEditorWrapper({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={handleTogglePublish}
-            disabled={isPending}
-          >
-            {isPublished ? "Unpublish" : "Publish"}
-          </Button>
-          <Button onClick={handleSave} disabled={isPending || !hasChanges}>
-            {isPending ? "Saving..." : "Save"}
-          </Button>
+          {showResetConfirm ? (
+            <>
+              <span className="text-sm text-amber-600">Reset to default template?</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleResetToTemplate}
+                disabled={isPending}
+              >
+                Yes, Reset
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowResetConfirm(true)}
+                disabled={isPending}
+              >
+                Reset to Template
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleTogglePublish}
+                disabled={isPending}
+              >
+                {isPublished ? "Unpublish" : "Publish"}
+              </Button>
+              <Button onClick={handleSave} disabled={isPending || !hasChanges}>
+                {isPending ? "Saving..." : "Save"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

@@ -190,6 +190,14 @@ export async function switchPageEditor(id: string, editorType: "tiptap" | "grape
   return { success: true };
 }
 
+export async function resetPageToTemplate(id: string) {
+  const api = await createApiClient();
+  await api.resetPageToTemplate(id);
+  revalidatePath("/dashboard/pages");
+  revalidatePath(`/dashboard/pages/${id}`);
+  return { success: true };
+}
+
 // Van management
 export async function createVan(formData: FormData) {
   const api = await createApiClient();
