@@ -4,7 +4,9 @@ import { getLogtoConfig } from "@/lib/logto";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@staysafeos/ui";
 import Link from "next/link";
-import { headers } from "next/headers";
+
+// Prevent caching - always check auth state and tenant landing page
+export const dynamic = "force-dynamic";
 
 interface TenantInfo {
   id: string;
@@ -50,11 +52,7 @@ async function getLandingPage(slug: string): Promise<LandingPage | null> {
   }
 }
 
-export default async function AppIndexPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+export default async function AppIndexPage() {
   // Get dynamic config based on current host
   const logtoConfig = await getLogtoConfig();
 
@@ -80,27 +78,8 @@ export default async function AppIndexPage({
     redirect("/partner-not-found");
   }
 
-  // Check if we should auto-redirect to Logto for SSO
-  // Skip if user explicitly wants to see landing page (?landing=true)
-  // or if auto-signin already attempted (?sso=attempted)
-  const params = await searchParams;
-  const showLanding = params.landing === "true";
-  const ssoAttempted = params.sso === "attempted";
-
-  // For custom domains or when coming from another StaySafeOS domain,
-  // auto-redirect through Logto to establish session
-  if (!showLanding && !ssoAttempted) {
-    // Check if user might already be logged in elsewhere by redirecting through Logto
-    // The ?sso=attempted prevents infinite loops
-    const headersList = await headers();
-    const referer = headersList.get("referer") || "";
-    const isFromStaySafeOS = referer.includes("staysafeos.com");
-
-    // Auto-SSO if coming from another StaySafeOS domain
-    if (isFromStaySafeOS) {
-      redirect("/api/auth/signin?sso=auto");
-    }
-  }
+  // Note: Auto-SSO was removed as it caused redirect loops when logging out
+  // Users click "Sign in" to authenticate
 
   // Check if tier supports custom pages
   const tierHasPages = ["growth", "pro", "enterprise"].includes(tenant.subscriptionTier);
