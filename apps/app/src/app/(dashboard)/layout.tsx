@@ -62,7 +62,28 @@ export default async function DashboardLayout({
   } | undefined = undefined;
 
   try {
-    const api = await createApiClient();
+    // Retry logic to handle Logto session initialization race condition
+    // First request sometimes fails, but second request works
+    let api: Awaited<ReturnType<typeof createApiClient>> | null = null;
+    let retries = 2;
+
+    while (retries > 0 && !api) {
+      try {
+        api = await createApiClient();
+      } catch (e) {
+        retries--;
+        if (retries > 0) {
+          console.log("[dashboard/layout] Retrying API client creation...");
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    if (!api) {
+      throw new Error("Failed to create API client after retries");
+    }
 
     // Check membership status
     const status = await api.getMembershipStatus();
