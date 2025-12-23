@@ -26,6 +26,9 @@ export class StreamService implements OnModuleInit, OnModuleDestroy {
       "van.updated",
       "van.transfer.created",
       "van.transfer.updated",
+      "task.completed",
+      "tasks.reordered",
+      "optimization.complete",
     ];
 
     for (const event of events) {

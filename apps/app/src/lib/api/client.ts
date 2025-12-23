@@ -102,8 +102,15 @@ export class ApiClient {
   async createManualRide(data: {
     riderName: string;
     riderPhone: string;
+    passengerCount?: number;
     pickupAddress: string;
+    pickupLat?: number;
+    pickupLng?: number;
     dropoffAddress: string;
+    dropoffLat?: number;
+    dropoffLng?: number;
+    notes?: string;
+    priority?: number;
     vanId?: string;
     driverId?: string;
     tcId?: string;

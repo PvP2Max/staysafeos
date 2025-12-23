@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from "@nestjs/comm
 import { PrismaService } from "../prisma/prisma.service";
 import { RequestContextService } from "../common/context/request-context.service";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+import { OsrmService } from "../osrm/osrm.service";
 import {
   CreateVanDto,
   UpdateVanDto,
@@ -16,7 +17,8 @@ export class VansService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly requestContext: RequestContextService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly osrmService: OsrmService
   ) {}
 
   /**
@@ -340,7 +342,7 @@ export class VansService {
   }
 
   /**
-   * Suggest vans for a pickup location (sorted by distance)
+   * Suggest vans for a pickup location (sorted by drive time using OSRM)
    */
   async suggestVans(pickupLat: number, pickupLng: number) {
     const org = this.requestContext.requireOrganization();
@@ -363,19 +365,40 @@ export class VansService {
       },
     });
 
-    // Calculate distance and sort
-    const withDistance = vans.map((van) => ({
-      ...van,
-      distance: this.calculateDistance(
-        pickupLat,
-        pickupLng,
-        van.currentLat!,
-        van.currentLng!
-      ),
-    }));
+    if (vans.length === 0) {
+      return [];
+    }
 
-    withDistance.sort((a, b) => a.distance - b.distance);
-    return withDistance;
+    // Build coordinates array for OSRM matrix
+    const coords = [
+      { lat: pickupLat, lng: pickupLng },
+      ...vans.map((v) => ({ lat: v.currentLat!, lng: v.currentLng! })),
+    ];
+
+    // Get drive times from OSRM
+    const matrix = await this.osrmService.getDriveMatrix(coords);
+
+    // Calculate drive time and ETA for each van (first row of matrix is from pickup to each van)
+    const withDriveTime = vans.map((van, index) => {
+      const driveTimeSeconds = matrix.durations[0]?.[index + 1] || 0;
+      const distanceMeters = matrix.distances?.[0]?.[index + 1] || 0;
+      const eta = new Date(Date.now() + driveTimeSeconds * 1000);
+
+      return {
+        ...van,
+        driveTimeSeconds,
+        driveTimeMinutes: Math.round(driveTimeSeconds / 60),
+        distanceMeters,
+        distanceMiles: Math.round((distanceMeters / 1609.34) * 10) / 10,
+        eta,
+        // Keep legacy distance field for backwards compatibility
+        distance: distanceMeters / 1609.34,
+      };
+    });
+
+    // Sort by drive time (ascending)
+    withDriveTime.sort((a, b) => a.driveTimeSeconds - b.driveTimeSeconds);
+    return withDriveTime;
   }
 
   /**

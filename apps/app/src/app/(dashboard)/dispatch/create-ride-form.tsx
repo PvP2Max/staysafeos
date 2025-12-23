@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { Button, Input, Label, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@staysafeos/ui";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 interface Van {
   id: string;
@@ -21,11 +22,33 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
     riderPhone: "",
     passengerCount: "1",
     pickupAddress: "",
+    pickupLat: undefined as number | undefined,
+    pickupLng: undefined as number | undefined,
     dropoffAddress: "",
+    dropoffLat: undefined as number | undefined,
+    dropoffLng: undefined as number | undefined,
     notes: "",
     vanId: "",
     priority: "0",
   });
+
+  const handlePickupChange = useCallback((address: string, lat?: number, lng?: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      pickupAddress: address,
+      pickupLat: lat,
+      pickupLng: lng,
+    }));
+  }, []);
+
+  const handleDropoffChange = useCallback((address: string, lat?: number, lng?: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      dropoffAddress: address,
+      dropoffLat: lat,
+      dropoffLng: lng,
+    }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +60,16 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...formData,
+            riderName: formData.riderName,
+            riderPhone: formData.riderPhone,
             passengerCount: parseInt(formData.passengerCount),
+            pickupAddress: formData.pickupAddress,
+            pickupLat: formData.pickupLat,
+            pickupLng: formData.pickupLng,
+            dropoffAddress: formData.dropoffAddress,
+            dropoffLat: formData.dropoffLat,
+            dropoffLng: formData.dropoffLng,
+            notes: formData.notes || undefined,
             priority: parseInt(formData.priority),
             vanId: formData.vanId || undefined,
           }),
@@ -54,7 +85,11 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
           riderPhone: "",
           passengerCount: "1",
           pickupAddress: "",
+          pickupLat: undefined,
+          pickupLng: undefined,
           dropoffAddress: "",
+          dropoffLat: undefined,
+          dropoffLng: undefined,
           notes: "",
           vanId: "",
           priority: "0",
@@ -93,22 +128,31 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="pickupAddress">Pickup Address *</Label>
-        <Input
-          id="pickupAddress"
+        <AddressAutocomplete
           value={formData.pickupAddress}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, pickupAddress: e.target.value })}
-          required
+          onChange={handlePickupChange}
+          placeholder="Enter pickup address..."
+          showCurrentLocation
         />
+        {formData.pickupLat && formData.pickupLng && (
+          <p className="text-xs text-muted-foreground">
+            Coordinates: {formData.pickupLat.toFixed(5)}, {formData.pickupLng.toFixed(5)}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="dropoffAddress">Dropoff Address *</Label>
-        <Input
-          id="dropoffAddress"
+        <AddressAutocomplete
           value={formData.dropoffAddress}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, dropoffAddress: e.target.value })}
-          required
+          onChange={handleDropoffChange}
+          placeholder="Enter dropoff address..."
         />
+        {formData.dropoffLat && formData.dropoffLng && (
+          <p className="text-xs text-muted-foreground">
+            Coordinates: {formData.dropoffLat.toFixed(5)}, {formData.dropoffLng.toFixed(5)}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

@@ -314,6 +314,10 @@ export class DriversService {
     }
 
     this.eventEmitter.emit("van.updated", { van, orgId: org.id });
+
+    // Emit task.completed for optimization trigger
+    this.eventEmitter.emit("task.completed", { vanId: van.id, orgId: org.id, task: updated });
+
     return updated;
   }
 

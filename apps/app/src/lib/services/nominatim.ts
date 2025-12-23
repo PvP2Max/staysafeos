@@ -1,6 +1,6 @@
 /**
  * Nominatim API service for address geocoding and search
- * Uses OpenStreetMap's Nominatim service
+ * Uses internal API proxy to avoid mixed content and CORS issues
  */
 
 export interface NominatimResult {
@@ -20,11 +20,9 @@ export interface NominatimResult {
   };
 }
 
-const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
-const USER_AGENT = "StaySafeOS/1.0 (https://staysafeos.com)";
-
 /**
  * Search for addresses matching a query string
+ * Uses internal API proxy to handle HTTPS/CORS
  */
 export async function searchAddress(query: string, limit = 5): Promise<NominatimResult[]> {
   if (!query || query.trim().length < 3) {
@@ -33,19 +31,10 @@ export async function searchAddress(query: string, limit = 5): Promise<Nominatim
 
   try {
     const params = new URLSearchParams({
-      format: "json",
       q: query,
-      countrycodes: "us",
-      limit: String(limit),
-      addressdetails: "1",
     });
 
-    const response = await fetch(`${NOMINATIM_BASE_URL}/search?${params}`, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/json",
-      },
-    });
+    const response = await fetch(`/api/geocode/search?${params}`);
 
     if (!response.ok) {
       console.error("[nominatim] Search failed:", response.status, response.statusText);
@@ -62,22 +51,16 @@ export async function searchAddress(query: string, limit = 5): Promise<Nominatim
 
 /**
  * Reverse geocode coordinates to an address
+ * Uses internal API proxy to handle HTTPS/CORS
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
   try {
     const params = new URLSearchParams({
-      format: "json",
       lat: String(lat),
-      lon: String(lng),
-      addressdetails: "1",
+      lng: String(lng),
     });
 
-    const response = await fetch(`${NOMINATIM_BASE_URL}/reverse?${params}`, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/json",
-      },
-    });
+    const response = await fetch(`/api/geocode/reverse?${params}`);
 
     if (!response.ok) {
       console.error("[nominatim] Reverse geocode failed:", response.status, response.statusText);
