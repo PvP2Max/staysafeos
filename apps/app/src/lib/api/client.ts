@@ -19,22 +19,27 @@ export class ApiClient {
   }
 
   private async fetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    };
+    const headers: Record<string, string> = {};
+
+    // Only set Content-Type for requests with a body
+    if (options.body) {
+      headers["Content-Type"] = "application/json";
+    }
 
     if (this.accessToken) {
-      (headers as Record<string, string>)["Authorization"] = `Bearer ${this.accessToken}`;
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
     }
 
     if (this.tenantId) {
-      (headers as Record<string, string>)["X-StaySafe-Tenant"] = this.tenantId;
+      headers["X-StaySafe-Tenant"] = this.tenantId;
     }
+
+    // Merge with any provided headers
+    const finalHeaders = { ...headers, ...options.headers };
 
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
-      headers,
+      headers: finalHeaders,
       cache: "no-store",
     });
 
