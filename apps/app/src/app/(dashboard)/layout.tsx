@@ -1,6 +1,7 @@
 import { getLogtoContext, signOut } from "@logto/next/server-actions";
 import { redirect } from "next/navigation";
-import { getLogtoConfig } from "@/lib/logto";
+import { headers } from "next/headers";
+import { getLogtoConfig, getApiAccessToken } from "@/lib/logto";
 import { createApiClient } from "@/lib/api/client";
 import { getTenantFromRequest } from "@/lib/tenant";
 import { DashboardShell } from "@/components/navigation";
@@ -10,6 +11,8 @@ import { ProfileCompletionWrapper } from "@/components/profile-completion-wrappe
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
+
+const API_URL = process.env.API_URL || "https://api.staysafeos.com";
 
 export default async function DashboardLayout({
   children,
@@ -22,6 +25,10 @@ export default async function DashboardLayout({
   if (!isAuthenticated) {
     redirect("/");
   }
+
+  // Get auth data directly here to avoid race conditions
+  const accessToken = await getApiAccessToken();
+  const tenantSlug = await getTenantFromRequest();
 
   // Fetch user data and membership status
   let role: string | null = null;
@@ -62,37 +69,37 @@ export default async function DashboardLayout({
   } | undefined = undefined;
 
   try {
-    // Retry logic to handle Logto session initialization race condition
-    // First request sometimes fails, but second request works
-    let api: Awaited<ReturnType<typeof createApiClient>> | null = null;
-    let retries = 2;
+    // Make direct API call like the debug endpoint does
+    // This avoids race conditions with the ApiClient class
+    if (accessToken && tenantSlug) {
+      const statusResponse = await fetch(`${API_URL}/v1/me/membership-status`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "X-StaySafe-Tenant": tenantSlug,
+        },
+        cache: "no-store",
+      });
 
-    while (retries > 0 && !api) {
-      try {
-        api = await createApiClient();
-      } catch (e) {
-        retries--;
-        if (retries > 0) {
-          console.log("[dashboard/layout] Retrying API client creation...");
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } else {
-          throw e;
+      if (statusResponse.ok) {
+        const status = await statusResponse.json();
+        console.log("[dashboard/layout] Membership status:", JSON.stringify(status));
+        if (status.hasAccount && !status.hasMembership) {
+          redirect("/no-membership");
         }
+        role = status.role;
+        console.log("[dashboard/layout] Role set to:", role);
+      } else {
+        console.error("[dashboard/layout] Failed to get membership status:", statusResponse.status);
       }
+    } else {
+      console.warn("[dashboard/layout] Missing accessToken or tenantSlug", {
+        hasToken: !!accessToken,
+        tenantSlug
+      });
     }
 
-    if (!api) {
-      throw new Error("Failed to create API client after retries");
-    }
-
-    // Check membership status
-    const status = await api.getMembershipStatus();
-    console.log("[dashboard/layout] Membership status:", JSON.stringify(status));
-    if (status.hasAccount && !status.hasMembership) {
-      redirect("/no-membership");
-    }
-    role = status.role;
-    console.log("[dashboard/layout] Role set to:", role);
+    // Create API client for remaining calls
+    const api = await createApiClient();
 
     // Get user profile
     try {
