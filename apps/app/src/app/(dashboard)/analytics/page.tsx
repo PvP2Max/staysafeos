@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { createApiClient } from "@/lib/api/client";
 
+export const dynamic = "force-dynamic";
+
 export default async function AnalyticsPage() {
   let analytics: {
     totalRides: number;

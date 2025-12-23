@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getLogtoConfig } from "@/lib/logto";
 import { DriverConsole } from "./driver-console";
 
+export const dynamic = "force-dynamic";
+
 export default async function DriverPage() {
   const logtoConfig = await getLogtoConfig();
   const { isAuthenticated } = await getLogtoContext(logtoConfig);

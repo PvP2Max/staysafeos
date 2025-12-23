@@ -1,5 +1,8 @@
 import { createApiClient } from "@/lib/api/client";
+import { getSessionData, isAdminRole } from "@/lib/session";
 import { VanManagement } from "@/components/van-management";
+
+export const dynamic = "force-dynamic";
 
 export default async function VansPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -7,12 +10,13 @@ export default async function VansPage() {
   let canManage = false;
 
   try {
+    // Get role from internal session (avoids Logto race condition)
+    const session = await getSessionData();
+    canManage = isAdminRole(session.role);
+
+    // Fetch vans
     const api = await createApiClient();
     vans = await api.getVans();
-
-    // Check if user can manage vans (EXECUTIVE or ADMIN)
-    const status = await api.getMembershipStatus();
-    canManage = ["EXECUTIVE", "ADMIN"].includes(status.role || "");
   } catch {
     // Use empty list if API fails
   }

@@ -1,6 +1,8 @@
 import { createApiClient } from "@/lib/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge } from "@staysafeos/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function DriversPage() {
   let vans: Array<{
     id: string;

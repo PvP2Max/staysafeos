@@ -4,6 +4,8 @@ import { getPublicPage } from "@/lib/api/client";
 import { PageRenderer } from "@/components/page-renderer";
 import { GrapesJSRenderer } from "@/components/grapesjs-renderer";
 
+export const dynamic = "force-dynamic";
+
 interface PublicPageProps {
   params: Promise<{ slug: string }>;
 }

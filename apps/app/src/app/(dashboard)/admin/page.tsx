@@ -2,6 +2,8 @@ import { createApiClient } from "@/lib/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from "@staysafeos/ui";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   let stats = {
     totalMembers: 0,

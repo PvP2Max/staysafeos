@@ -2,6 +2,8 @@ import { createApiClient } from "@/lib/api/client";
 import { CreateRideForm } from "./create-ride-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@staysafeos/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function DispatchPage() {
   let pendingRides: Array<{
     id: string;

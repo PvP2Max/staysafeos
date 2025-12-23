@@ -1,5 +1,8 @@
 import { createApiClient } from "@/lib/api/client";
+import { getSessionData, canManageOperations } from "@/lib/session";
 import { ShiftManagement } from "@/components/shift-management";
+
+export const dynamic = "force-dynamic";
 
 export default async function ShiftsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -7,12 +10,13 @@ export default async function ShiftsPage() {
   let canManage = false;
 
   try {
+    // Get role from internal session (avoids Logto race condition)
+    const session = await getSessionData();
+    canManage = canManageOperations(session.role);
+
+    // Fetch shifts
     const api = await createApiClient();
     shifts = await api.getShifts();
-
-    // Check if user can manage shifts (DISPATCHER, EXECUTIVE, or ADMIN)
-    const status = await api.getMembershipStatus();
-    canManage = ["EXECUTIVE", "ADMIN", "DISPATCHER"].includes(status.role || "");
   } catch {
     // Use empty list if API fails
   }
