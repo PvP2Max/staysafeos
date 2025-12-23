@@ -5,8 +5,10 @@ import { getTenantFromRequest } from "@/lib/tenant";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@staysafeos/ui";
 import Link from "next/link";
 
-// Prevent caching - always check auth state and tenant landing page
+// Prevent all caching - always check auth state and tenant landing page
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 interface TenantInfo {
   id: string;
