@@ -224,7 +224,8 @@ function ShiftCard({
   const slotsRemaining = shift.slotsRemaining ?? shift.slotsNeeded - (shift.signups?.length ?? 0);
   const isFull = slotsRemaining <= 0;
   const isSignedUp = shift.signedUp || !!shift.userSignup;
-  const isPast = startTime < new Date();
+  // Users can sign up until the shift ends (not just until it starts)
+  const hasEnded = endTime < new Date();
 
   const roleColors: Record<string, string> = {
     DRIVER: "bg-yellow-100 text-yellow-800",
@@ -282,7 +283,7 @@ function ShiftCard({
               {slotsRemaining} of {shift.slotsNeeded} spots available
             </p>
           </div>
-          <ShiftActionButton shift={shift} isFull={isFull} isSignedUp={isSignedUp} isPast={isPast} onRefresh={onRefresh} />
+          <ShiftActionButton shift={shift} isFull={isFull} isSignedUp={isSignedUp} hasEnded={hasEnded} onRefresh={onRefresh} />
         </div>
 
         {/* Show who's signed up */}
@@ -320,23 +321,23 @@ function ShiftActionButton({
   shift,
   isFull,
   isSignedUp,
-  isPast,
+  hasEnded,
   onRefresh,
 }: {
   shift: Shift;
   isFull: boolean;
   isSignedUp: boolean;
-  isPast: boolean;
+  hasEnded: boolean;
   onRefresh: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Don't show signup button for past shifts (unless already signed up - allow cancellation)
-  if (isPast && !isSignedUp) {
+  // Don't show signup button for ended shifts (unless already signed up - allow cancellation)
+  if (hasEnded && !isSignedUp) {
     return (
       <Button variant="outline" size="sm" disabled>
-        Past
+        Ended
       </Button>
     );
   }

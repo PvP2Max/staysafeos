@@ -227,9 +227,9 @@ export class ShiftsService {
       throw new BadRequestException("Shift is full");
     }
 
-    // Check if shift has passed
-    if (new Date(shift.startTime) < new Date()) {
-      throw new BadRequestException("Cannot sign up for past shifts");
+    // Check if shift has ended (users can sign up until shift ends)
+    if (new Date(shift.endTime) < new Date()) {
+      throw new BadRequestException("Cannot sign up for shifts that have ended");
     }
 
     // Check if already signed up
@@ -284,9 +284,9 @@ export class ShiftsService {
       throw new NotFoundException("Signup not found");
     }
 
-    // Check if shift has passed
-    if (new Date(signup.shift.startTime) < new Date()) {
-      throw new BadRequestException("Cannot cancel past shift signups");
+    // Check if shift has ended (can cancel until shift ends)
+    if (new Date(signup.shift.endTime) < new Date()) {
+      throw new BadRequestException("Cannot cancel signups for shifts that have ended");
     }
 
     await this.prisma.shiftSignup.delete({

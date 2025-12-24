@@ -15,7 +15,7 @@ export async function POST(
     console.error("[api/shifts/[id]/signup] POST Error:", error);
 
     // Return 400 for validation errors
-    const isValidationError = message.includes("past") ||
+    const isValidationError = message.includes("ended") ||
                                message.includes("full") ||
                                message.includes("already");
 
