@@ -200,7 +200,7 @@ model OrganizationSettings {
   autoDisableEnabled     Boolean      @default(false) @map("auto_disable_enabled")
   autoDisableTime        String?      @map("auto_disable_time")
   autoDisableTz          String?      @map("auto_disable_tz")
-  timezone               String       @default("America/Chicago") // IANA timezone for org operations
+  timezone               String?      @default("America/Chicago") // IANA timezone for org operations
   nightBriefVideoId      String?      @map("night_brief_video_id")
   contactEmail           String?      @map("contact_email")
   autoAssignEnabled      Boolean      @default(true) @map("auto_assign_enabled")
