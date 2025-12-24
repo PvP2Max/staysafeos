@@ -186,6 +186,56 @@ export class LogtoAuthGuard implements CanActivate {
       } else {
         console.log(`[auth] Account has no memberships at all`);
       }
+
+      // Auto-create RIDER membership for the tenant
+      const organization = await this.prisma.organization.findFirst({
+        where: {
+          OR: [
+            { slug: tenantSlug },
+            { logtoOrgId: tenantSlug },
+            { id: tenantSlug },
+          ],
+        },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          subscriptionTier: true,
+        },
+      });
+
+      if (organization) {
+        try {
+          const newMembership = await this.prisma.membership.create({
+            data: {
+              accountId: account.id,
+              organizationId: organization.id,
+              role: "RIDER",
+            },
+          });
+          console.log(`[auth] Auto-created RIDER membership for ${account.email} in org ${organization.slug}`);
+
+          // Set membership in context
+          this.requestContext.setMembership({
+            id: newMembership.id,
+            role: newMembership.role,
+            tenantId: newMembership.organizationId,
+            tenant: organization,
+          });
+
+          this.requestContext.setOrganization({
+            id: organization.id,
+            slug: organization.slug,
+            name: organization.name,
+            subscriptionTier: organization.subscriptionTier,
+          });
+          return;
+        } catch (error) {
+          console.error(`[auth] Failed to auto-create RIDER membership:`, error);
+        }
+      } else {
+        console.log(`[auth] Organization not found for tenant slug "${tenantSlug}", cannot auto-create membership`);
+      }
     }
 
     if (membership) {

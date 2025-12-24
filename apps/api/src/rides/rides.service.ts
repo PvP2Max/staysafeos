@@ -86,6 +86,7 @@ export class RidesService {
         tcId: dto.tcId,
         dispatcherId: membership?.id,
         assignedAt: dto.vanId ? new Date() : undefined,
+        skipAutoAssign: dto.skipAutoAssign ?? false,
       },
       include: {
         van: true,

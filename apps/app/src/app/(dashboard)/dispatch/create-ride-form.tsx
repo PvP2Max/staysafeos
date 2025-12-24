@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { Button, Input, Label, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@staysafeos/ui";
+import { Button, Input, Label, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@staysafeos/ui";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 interface Van {
@@ -12,9 +12,10 @@ interface Van {
 
 interface CreateRideFormProps {
   vans: Van[];
+  showSkipAutoAssign?: boolean;
 }
 
-export function CreateRideForm({ vans }: CreateRideFormProps) {
+export function CreateRideForm({ vans, showSkipAutoAssign = false }: CreateRideFormProps) {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [formData, setFormData] = useState({
@@ -30,6 +31,7 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
     notes: "",
     vanId: "",
     priority: "0",
+    skipAutoAssign: false,
   });
 
   const handlePickupChange = useCallback((address: string, lat?: number, lng?: number) => {
@@ -72,6 +74,7 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
             notes: formData.notes || undefined,
             priority: parseInt(formData.priority),
             vanId: formData.vanId || undefined,
+            skipAutoAssign: formData.skipAutoAssign,
           }),
         });
 
@@ -93,6 +96,7 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
           notes: "",
           vanId: "",
           priority: "0",
+          skipAutoAssign: false,
         });
       } catch {
         setMessage("Failed to create ride. Please try again.");
@@ -222,6 +226,24 @@ export function CreateRideForm({ vans }: CreateRideFormProps) {
           rows={3}
         />
       </div>
+
+      {showSkipAutoAssign && !formData.vanId && (
+        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+          <Switch
+            id="skipAutoAssign"
+            checked={formData.skipAutoAssign}
+            onCheckedChange={(checked) => setFormData({ ...formData, skipAutoAssign: checked })}
+          />
+          <div>
+            <Label htmlFor="skipAutoAssign" className="cursor-pointer">
+              Skip auto-assign
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Keep ride in queue for manual assignment
+            </p>
+          </div>
+        </div>
+      )}
 
       {message && (
         <p className={`text-sm ${message.includes("success") ? "text-green-600" : "text-red-600"}`}>

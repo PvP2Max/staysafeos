@@ -264,6 +264,7 @@ export class OrganizationsController {
       rankRequired?: boolean;
       orgRequired?: boolean;
       homeRequired?: boolean;
+      autoAssignEnabled?: boolean;
     }
   ) {
     const accountId = this.requestContext.store?.accountId;

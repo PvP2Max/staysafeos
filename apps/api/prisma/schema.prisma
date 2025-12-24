@@ -202,6 +202,7 @@ model OrganizationSettings {
   autoDisableTz          String?      @map("auto_disable_tz")
   nightBriefVideoId      String?      @map("night_brief_video_id")
   contactEmail           String?      @map("contact_email")
+  autoAssignEnabled      Boolean      @default(true) @map("auto_assign_enabled")
 
   @@map("organization_settings")
 }
@@ -304,6 +305,7 @@ model Ride {
   status         String       @default("PENDING") // PENDING, ASSIGNED, EN_ROUTE, PICKED_UP, COMPLETED, CANCELLED
   priority       Int          @default(0)
   notes          String?
+  skipAutoAssign Boolean      @default(false) @map("skip_auto_assign")
 
   // Van assignment
   vanId          String?      @map("van_id")

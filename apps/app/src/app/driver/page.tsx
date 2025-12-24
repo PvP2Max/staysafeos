@@ -32,7 +32,7 @@ export default async function DriverPage() {
     type: string;
     address: string;
     notes?: string;
-    sortOrder: number;
+    position: number;
     ride?: {
       id: string;
       riderName: string;

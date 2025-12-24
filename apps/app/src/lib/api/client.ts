@@ -114,6 +114,7 @@ export class ApiClient {
     vanId?: string;
     driverId?: string;
     tcId?: string;
+    skipAutoAssign?: boolean;
   }) {
     return this.fetch<Ride>("/v1/rides/manual", {
       method: "POST",
@@ -240,24 +241,24 @@ export class ApiClient {
 
   // Transfers
   async requestTransfer(toMembershipId: string) {
-    return this.fetch<VanTransfer>("/v1/driver/transfers", {
+    return this.fetch<VanTransfer>("/v1/driver/transfer/request", {
       method: "POST",
       body: JSON.stringify({ toMembershipId }),
     });
   }
 
   async getMyTransfers(): Promise<VanTransfer[]> {
-    return this.fetch("/v1/driver/transfers");
+    return this.fetch("/v1/driver/transfer/pending");
   }
 
   async acceptTransfer(transferId: string) {
-    return this.fetch(`/v1/driver/transfers/${transferId}/accept`, {
+    return this.fetch(`/v1/driver/transfer/${transferId}/accept`, {
       method: "POST",
     });
   }
 
   async declineTransfer(transferId: string) {
-    return this.fetch(`/v1/driver/transfers/${transferId}/decline`, {
+    return this.fetch(`/v1/driver/transfer/${transferId}/decline`, {
       method: "POST",
     });
   }
@@ -486,6 +487,7 @@ export class ApiClient {
       rankRequired: boolean;
       orgRequired: boolean;
       homeRequired: boolean;
+      autoAssignEnabled: boolean;
     }>(`/v1/organizations/${orgId}/settings`);
   }
 
@@ -493,10 +495,39 @@ export class ApiClient {
     rankRequired?: boolean;
     orgRequired?: boolean;
     homeRequired?: boolean;
+    autoAssignEnabled?: boolean;
   }) {
     return this.fetch<{ success: boolean }>(`/v1/organizations/${orgId}/settings`, {
       method: "PATCH",
       body: JSON.stringify(settings),
+    });
+  }
+
+  // Update ride details
+  async updateRide(rideId: string, data: {
+    riderName?: string;
+    riderPhone?: string;
+    passengerCount?: number;
+    pickupAddress?: string;
+    pickupLat?: number;
+    pickupLng?: number;
+    dropoffAddress?: string;
+    dropoffLat?: number;
+    dropoffLng?: number;
+    notes?: string;
+    priority?: number;
+  }) {
+    return this.fetch<Ride>(`/v1/rides/${rideId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Unassign ride from van
+  async unassignRide(rideId: string) {
+    return this.fetch<Ride>(`/v1/rides/${rideId}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ vanId: null, driverId: null, tcId: null }),
     });
   }
 

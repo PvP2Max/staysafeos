@@ -524,6 +524,7 @@ export class TenantsService {
       rankRequired: settings?.rankRequired ?? false,
       orgRequired: settings?.orgRequired ?? false,
       homeRequired: settings?.homeRequired ?? false,
+      autoAssignEnabled: settings?.autoAssignEnabled ?? true,
     };
   }
 
@@ -537,6 +538,7 @@ export class TenantsService {
       rankRequired?: boolean;
       orgRequired?: boolean;
       homeRequired?: boolean;
+      autoAssignEnabled?: boolean;
     }
   ) {
     const org = await this.prisma.organization.findUnique({
@@ -559,11 +561,13 @@ export class TenantsService {
         rankRequired: data.rankRequired ?? false,
         orgRequired: data.orgRequired ?? false,
         homeRequired: data.homeRequired ?? false,
+        autoAssignEnabled: data.autoAssignEnabled ?? true,
       },
       update: {
         ...(data.rankRequired !== undefined && { rankRequired: data.rankRequired }),
         ...(data.orgRequired !== undefined && { orgRequired: data.orgRequired }),
         ...(data.homeRequired !== undefined && { homeRequired: data.homeRequired }),
+        ...(data.autoAssignEnabled !== undefined && { autoAssignEnabled: data.autoAssignEnabled }),
       },
     });
 

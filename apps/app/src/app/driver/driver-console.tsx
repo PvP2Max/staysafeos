@@ -29,7 +29,7 @@ interface Task {
   type: string;
   address: string;
   notes?: string;
-  sortOrder: number;
+  position: number;
   ride?: {
     id: string;
     riderName: string;
@@ -132,7 +132,7 @@ export function DriverConsole({
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Driver Console</h1>
+          <h1 className="text-3xl font-bold">Request Console</h1>
           <p className="text-muted-foreground mt-1">
             {status.van ? `Van: ${status.van.name}` : "Select a van to go online"}
           </p>
@@ -191,7 +191,7 @@ export function DriverConsole({
                 ) : (
                   <div className="space-y-4">
                     {tasks
-                      .sort((a, b) => a.sortOrder - b.sortOrder)
+                      .sort((a, b) => a.position - b.position)
                       .map((task, index) => (
                         <TaskCard
                           key={task.id}

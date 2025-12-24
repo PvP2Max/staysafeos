@@ -22,6 +22,7 @@ export interface Ride {
   priority: number;
   status: RideStatus;
   source: RideSource;
+  skipAutoAssign?: boolean;
   vanId?: string;
   driverId?: string;
   tcId?: string;
@@ -74,7 +75,7 @@ export interface VanTask {
   lat?: number;
   lng?: number;
   notes?: string;
-  sortOrder: number;
+  position: number;
   rideId?: string;
   ride?: Ride;
   completedAt?: string;

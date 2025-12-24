@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsInt,
   IsNumber,
+  IsBoolean,
   Min,
   Max,
   IsEnum,
@@ -72,4 +73,8 @@ export class CreateManualRideDto extends CreateRideDto {
   @IsOptional()
   @IsString()
   tcId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  skipAutoAssign?: boolean;
 }
