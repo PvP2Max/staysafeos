@@ -11,10 +11,17 @@ export async function POST(
     const result = await api.signUpForShift(id);
     return NextResponse.json(result);
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to sign up for shift";
     console.error("[api/shifts/[id]/signup] POST Error:", error);
+
+    // Return 400 for validation errors
+    const isValidationError = message.includes("past") ||
+                               message.includes("full") ||
+                               message.includes("already");
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to sign up for shift" },
-      { status: 500 }
+      { error: message },
+      { status: isValidationError ? 400 : 500 }
     );
   }
 }

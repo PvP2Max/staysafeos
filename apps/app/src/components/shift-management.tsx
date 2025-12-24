@@ -224,6 +224,7 @@ function ShiftCard({
   const slotsRemaining = shift.slotsRemaining ?? shift.slotsNeeded - (shift.signups?.length ?? 0);
   const isFull = slotsRemaining <= 0;
   const isSignedUp = shift.signedUp || !!shift.userSignup;
+  const isPast = startTime < new Date();
 
   const roleColors: Record<string, string> = {
     DRIVER: "bg-yellow-100 text-yellow-800",
@@ -281,7 +282,7 @@ function ShiftCard({
               {slotsRemaining} of {shift.slotsNeeded} spots available
             </p>
           </div>
-          <ShiftActionButton shift={shift} isFull={isFull} isSignedUp={isSignedUp} onRefresh={onRefresh} />
+          <ShiftActionButton shift={shift} isFull={isFull} isSignedUp={isSignedUp} isPast={isPast} onRefresh={onRefresh} />
         </div>
 
         {/* Show who's signed up */}
@@ -319,48 +320,75 @@ function ShiftActionButton({
   shift,
   isFull,
   isSignedUp,
+  isPast,
   onRefresh,
 }: {
   shift: Shift;
   isFull: boolean;
   isSignedUp: boolean;
+  isPast: boolean;
   onRefresh: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  // Don't show signup button for past shifts (unless already signed up - allow cancellation)
+  if (isPast && !isSignedUp) {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        Past
+      </Button>
+    );
+  }
 
   const handleSignup = () => {
+    setError(null);
     startTransition(async () => {
       try {
         const response = await fetch(`/api/shifts/${shift.id}/signup`, {
           method: "POST",
         });
-        if (!response.ok) throw new Error("Failed to sign up");
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to sign up");
+        }
         onRefresh();
-      } catch (error) {
-        console.error("Failed to sign up:", error);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to sign up";
+        setError(message);
+        console.error("Failed to sign up:", err);
       }
     });
   };
 
   const handleCancelSignup = () => {
+    setError(null);
     startTransition(async () => {
       try {
         const response = await fetch(`/api/shifts/${shift.id}/signup`, {
           method: "DELETE",
         });
-        if (!response.ok) throw new Error("Failed to cancel signup");
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to cancel signup");
+        }
         onRefresh();
-      } catch (error) {
-        console.error("Failed to cancel signup:", error);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to cancel signup";
+        setError(message);
+        console.error("Failed to cancel signup:", err);
       }
     });
   };
 
   if (isSignedUp) {
     return (
-      <Button variant="outline" size="sm" onClick={handleCancelSignup} disabled={isPending}>
-        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cancel"}
-      </Button>
+      <div className="flex flex-col items-end gap-1">
+        <Button variant="outline" size="sm" onClick={handleCancelSignup} disabled={isPending}>
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cancel"}
+        </Button>
+        {error && <span className="text-xs text-destructive">{error}</span>}
+      </div>
     );
   }
 
@@ -373,9 +401,12 @@ function ShiftActionButton({
   }
 
   return (
-    <Button size="sm" onClick={handleSignup} disabled={isPending}>
-      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign Up"}
-    </Button>
+    <div className="flex flex-col items-end gap-1">
+      <Button size="sm" onClick={handleSignup} disabled={isPending}>
+        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign Up"}
+      </Button>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
   );
 }
 
