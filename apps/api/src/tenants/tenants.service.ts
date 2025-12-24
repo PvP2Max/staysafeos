@@ -151,7 +151,8 @@ export class TenantsService {
 
   async findBySlug(slug: string) {
     // Use case-insensitive matching since subdomains are lowercase
-    return this.prisma.organization.findFirst({
+    console.log(`[tenants.service] findBySlug called with slug="${slug}"`);
+    const result = await this.prisma.organization.findFirst({
       where: { slug: { equals: slug, mode: "insensitive" } },
       include: {
         theme: true,
@@ -159,6 +160,8 @@ export class TenantsService {
         settings: true,
       },
     });
+    console.log(`[tenants.service] findBySlug result:`, result ? `found (id: ${result.id})` : 'null');
+    return result;
   }
 
   async findById(id: string) {

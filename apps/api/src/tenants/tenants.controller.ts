@@ -37,7 +37,10 @@ export class TenantsController {
   @Get(":slug")
   @Public()
   async getTenant(@Param("slug") slug: string) {
-    return this.tenantsService.findBySlug(slug);
+    console.log(`[tenants] GET /:slug called with slug="${slug}"`);
+    const tenant = await this.tenantsService.findBySlug(slug);
+    console.log(`[tenants] GET /:slug result for "${slug}":`, tenant ? `found (id: ${tenant.id}, slug: ${tenant.slug})` : 'null');
+    return tenant;
   }
 
   /**
