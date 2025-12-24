@@ -151,11 +151,12 @@ export class LogtoAuthGuard implements CanActivate {
     }
 
     // Load membership for this tenant (support slug, database ID, or Logto org ID)
+    // Use case-insensitive matching for slug since subdomains are lowercase
     const membership = await this.prisma.membership.findFirst({
       where: {
         accountId: account.id,
         OR: [
-          { organization: { slug: tenantSlug } },
+          { organization: { slug: { equals: tenantSlug, mode: "insensitive" } } },
           { organization: { logtoOrgId: tenantSlug } },
           { organizationId: tenantSlug },
         ],
@@ -188,10 +189,11 @@ export class LogtoAuthGuard implements CanActivate {
       }
 
       // Auto-create RIDER membership for the tenant
+      // Use case-insensitive matching for slug since subdomains are lowercase
       const organization = await this.prisma.organization.findFirst({
         where: {
           OR: [
-            { slug: tenantSlug },
+            { slug: { equals: tenantSlug, mode: "insensitive" } },
             { logtoOrgId: tenantSlug },
             { id: tenantSlug },
           ],
