@@ -102,10 +102,10 @@ export const PAGE_ACCESS_RULES: Record<string, AccessCheck> = {
   "/rides": (ctx) => isStaff(ctx.role),
   "/vans": (ctx) => isStaff(ctx.role),
 
-  // Dispatcher panel: DISPATCHER + on-shift, OR admin
+  // Dispatcher panel: DISPATCHER role or admin (no shift requirement)
   "/dispatch": (ctx) => {
     if (isAdminLevel(ctx.role)) return true;
-    return hasRole(ctx.role, "DISPATCHER") && ctx.onShiftRoles.includes("DISPATCHER");
+    return hasRole(ctx.role, "DISPATCHER");
   },
 
   // Driver panel: DRIVER/TC + on-shift, OR admin
