@@ -36,6 +36,7 @@ function getTenantFromHost(host: string): string | null {
 
 async function tenantExists(slug: string): Promise<boolean> {
   try {
+    console.log(`[middleware] Checking tenant exists: ${slug} via ${API_BASE_URL}/v1/tenants/${slug}`);
     const response = await fetch(`${API_BASE_URL}/v1/tenants/${slug}`, {
       method: "GET",
       headers: {
@@ -43,9 +44,19 @@ async function tenantExists(slug: string): Promise<boolean> {
       },
     });
 
-    return response.ok;
-  } catch {
+    console.log(`[middleware] Tenant check for "${slug}": status=${response.status}, ok=${response.ok}`);
+
+    if (!response.ok) {
+      return false;
+    }
+
+    // Check if the response body contains a valid tenant (not null)
+    const tenant = await response.json();
+    console.log(`[middleware] Tenant data for "${slug}":`, tenant ? `found (id: ${tenant.id})` : 'null');
+    return tenant !== null && tenant !== undefined;
+  } catch (error) {
     // If API is down, allow through (fail open)
+    console.error(`[middleware] Tenant check failed for "${slug}":`, error);
     return true;
   }
 }
