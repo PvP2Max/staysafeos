@@ -36,24 +36,38 @@ function getTenantFromHost(host: string): string | null {
 
 async function tenantExists(slug: string): Promise<boolean> {
   try {
-    console.log(`[middleware] Checking tenant exists: ${slug} via ${API_BASE_URL}/v1/tenants/${slug}`);
-    const response = await fetch(`${API_BASE_URL}/v1/tenants/${slug}`, {
+    // Use the list endpoint with search parameter - more reliable than single-tenant lookup
+    // This is the same endpoint that /partners uses, which we know works
+    const searchUrl = `${API_BASE_URL}/v1/tenants?search=${encodeURIComponent(slug)}`;
+    console.log(`[middleware] Checking tenant exists: ${slug} via ${searchUrl}`);
+
+    const response = await fetch(searchUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     });
 
-    console.log(`[middleware] Tenant check for "${slug}": status=${response.status}, ok=${response.ok}`);
+    console.log(`[middleware] Tenant search for "${slug}": status=${response.status}, ok=${response.ok}`);
 
     if (!response.ok) {
-      return false;
+      console.error(`[middleware] Tenant search failed with status ${response.status}`);
+      return true; // Fail open if API returns error
     }
 
-    // Check if the response body contains a valid tenant (not null)
-    const tenant = await response.json();
-    console.log(`[middleware] Tenant data for "${slug}":`, tenant ? `found (id: ${tenant.id})` : 'null');
-    return tenant !== null && tenant !== undefined;
+    const tenants = await response.json();
+    console.log(`[middleware] Tenant search returned ${Array.isArray(tenants) ? tenants.length : 0} results`);
+
+    // Check if any tenant in the list has a matching slug (case-insensitive)
+    if (Array.isArray(tenants)) {
+      const found = tenants.find(
+        (t: { slug?: string }) => t.slug?.toLowerCase() === slug.toLowerCase()
+      );
+      console.log(`[middleware] Tenant "${slug}":`, found ? `found (id: ${found.id}, slug: ${found.slug})` : 'not found');
+      return !!found;
+    }
+
+    return false;
   } catch (error) {
     // If API is down, allow through (fail open)
     console.error(`[middleware] Tenant check failed for "${slug}":`, error);
