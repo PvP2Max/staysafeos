@@ -124,11 +124,23 @@ export class RidesController {
   }
 
   /**
-   * Cancel a ride
+   * Cancel a ride (DELETE method)
    */
   @Delete(":id")
   @Roles("DISPATCHER", "TC", "EXECUTIVE", "ADMIN")
   async cancel(
+    @Param("id") id: string,
+    @Body() body: { reason?: string }
+  ) {
+    return this.ridesService.cancel(id, body.reason);
+  }
+
+  /**
+   * Cancel a ride (POST method - alternative endpoint)
+   */
+  @Post(":id/cancel")
+  @Roles("DISPATCHER", "TC", "EXECUTIVE", "ADMIN")
+  async cancelPost(
     @Param("id") id: string,
     @Body() body: { reason?: string }
   ) {
