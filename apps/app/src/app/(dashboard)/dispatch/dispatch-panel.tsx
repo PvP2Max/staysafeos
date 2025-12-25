@@ -78,14 +78,23 @@ export function DispatchPanel({
 
   const handleAssign = useCallback(
     async (rideId: string, vanId: string | null) => {
-      const response = await fetch(`/api/rides/${rideId}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vanId }),
-      });
-      if (response.ok) {
-        const updatedRide = await response.json();
-        updateRide(rideId, updatedRide);
+      try {
+        const response = await fetch(`/api/rides/${rideId}/assign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vanId }),
+        });
+        if (response.ok) {
+          const updatedRide = await response.json();
+          if (updatedRide?.id) {
+            updateRide(rideId, updatedRide);
+          }
+        } else {
+          const error = await response.json().catch(() => ({ error: "Failed to assign ride" }));
+          console.error("[dispatch] Assign failed:", error);
+        }
+      } catch (error) {
+        console.error("[dispatch] Assign error:", error);
       }
     },
     [updateRide]
@@ -93,13 +102,20 @@ export function DispatchPanel({
 
   const handleCancel = useCallback(
     async (rideId: string, reason: string) => {
-      const response = await fetch(`/api/rides/${rideId}/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      });
-      if (response.ok) {
-        removeRide(rideId);
+      try {
+        const response = await fetch(`/api/rides/${rideId}/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        });
+        if (response.ok) {
+          removeRide(rideId);
+        } else {
+          const error = await response.json().catch(() => ({ error: "Failed to cancel ride" }));
+          console.error("[dispatch] Cancel failed:", error);
+        }
+      } catch (error) {
+        console.error("[dispatch] Cancel error:", error);
       }
     },
     [removeRide]
@@ -107,14 +123,23 @@ export function DispatchPanel({
 
   const handleEdit = useCallback(
     async (rideId: string, data: Partial<Ride>) => {
-      const response = await fetch(`/api/rides/${rideId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (response.ok) {
-        const updatedRide = await response.json();
-        updateRide(rideId, updatedRide);
+      try {
+        const response = await fetch(`/api/rides/${rideId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (response.ok) {
+          const updatedRide = await response.json();
+          if (updatedRide?.id) {
+            updateRide(rideId, updatedRide);
+          }
+        } else {
+          const error = await response.json().catch(() => ({ error: "Failed to update ride" }));
+          console.error("[dispatch] Edit failed:", error);
+        }
+      } catch (error) {
+        console.error("[dispatch] Edit error:", error);
       }
     },
     [updateRide]
