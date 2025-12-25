@@ -98,19 +98,12 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
         const formats = await BarcodeDetector.getSupportedFormats();
         console.log("[IDScanner] Supported formats:", formats);
 
-        // Create detector with PDF417 and other common ID formats
-        type BarcodeFormat = "pdf417" | "code_128" | "code_39" | "qr_code";
-        const supportedFormats: BarcodeFormat[] = [];
-        if (formats.includes("pdf417")) supportedFormats.push("pdf417");
-        if (formats.includes("code_128")) supportedFormats.push("code_128");
-        if (formats.includes("code_39")) supportedFormats.push("code_39");
-        if (formats.includes("qr_code")) supportedFormats.push("qr_code");
-
-        if (supportedFormats.length === 0) {
-          throw new Error("No supported barcode formats found");
+        // Only use PDF417 for ID cards - this prevents picking up 1D barcodes
+        if (!formats.includes("pdf417")) {
+          throw new Error("PDF417 barcode format is not supported on this device");
         }
 
-        detectorRef.current = new BarcodeDetector({ formats: supportedFormats as BarcodeFormat[] });
+        detectorRef.current = new BarcodeDetector({ formats: ["pdf417"] });
 
         // Request camera access with high resolution for better barcode detection
         const stream = await navigator.mediaDevices.getUserMedia({
