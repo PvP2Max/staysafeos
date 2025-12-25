@@ -199,31 +199,39 @@ export function DriverConsole({
           </Card>
         ) : (
           <>
-            {/* Task List */}
+            {/* Current Task - Show only the next task */}
             <Card>
               <CardHeader>
-                <CardTitle>Your Tasks ({tasks.length})</CardTitle>
-                <CardDescription>Complete tasks in order</CardDescription>
+                <CardTitle>
+                  {tasks.length === 0 ? "No Tasks" : "Next Task"}
+                </CardTitle>
+                <CardDescription>
+                  {tasks.length === 0
+                    ? "Waiting for dispatch..."
+                    : `${tasks.length} task${tasks.length === 1 ? "" : "s"} remaining`}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {tasks.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No tasks assigned</p>
-                    <p className="text-sm mt-1">Waiting for dispatch...</p>
+                    <p className="text-sm mt-1">New rides will appear here</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {tasks
-                      .sort((a, b) => a.position - b.position)
-                      .map((task, index) => (
+                  <div>
+                    {(() => {
+                      const sortedTasks = [...tasks].sort((a, b) => a.position - b.position);
+                      const nextTask = sortedTasks[0];
+                      return (
                         <TaskCard
-                          key={task.id}
-                          task={task}
-                          index={index + 1}
-                          onComplete={() => handleCompleteTask(task.id)}
+                          key={nextTask.id}
+                          task={nextTask}
+                          index={1}
+                          onComplete={() => handleCompleteTask(nextTask.id)}
                           isPending={isPending}
                         />
-                      ))}
+                      );
+                    })()}
                   </div>
                 )}
               </CardContent>
