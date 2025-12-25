@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiClient } from "@/lib/api/client";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const api = await createApiClient();

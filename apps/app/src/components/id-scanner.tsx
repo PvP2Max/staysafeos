@@ -9,76 +9,132 @@ interface IDScannerProps {
   onClose: () => void;
 }
 
+// Extend Window to include BarcodeDetector
+declare global {
+  interface Window {
+    BarcodeDetector?: {
+      new (options?: { formats: string[] }): BarcodeDetectorInstance;
+      getSupportedFormats: () => Promise<string[]>;
+    };
+  }
+}
+
+interface BarcodeDetectorInstance {
+  detect: (image: ImageBitmapSource) => Promise<Array<{ rawValue: string; format: string }>>;
+}
+
 export function IDScanner({ onScan, onClose }: IDScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const scannerRef = useRef<HTMLDivElement>(null);
-  const html5QrCodeRef = useRef<any>(null);
+  const [supported, setSupported] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const animationRef = useRef<number>(0);
 
-  const stopScanner = useCallback(async () => {
-    if (html5QrCodeRef.current) {
-      try {
-        await html5QrCodeRef.current.stop();
-        html5QrCodeRef.current.clear();
-      } catch {
-        // Ignore stop errors
-      }
-      html5QrCodeRef.current = null;
+  const stopScanner = useCallback(() => {
+    // Cancel animation frame
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = 0;
     }
+
+    // Stop video stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    // Clear video source
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setScanning(false);
   }, []);
+
+  const scanFrame = useCallback(async () => {
+    if (!videoRef.current || !detectorRef.current || !scanning) return;
+
+    try {
+      const video = videoRef.current;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        const barcodes = await detectorRef.current.detect(video);
+
+        for (const barcode of barcodes) {
+          console.log("[IDScanner] Detected:", barcode.format, barcode.rawValue.substring(0, 50) + "...");
+          const parsed = parseIDBarcode(barcode.rawValue);
+          if (parsed) {
+            stopScanner();
+            onScan(parsed);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      // Detection errors are normal during scanning
+    }
+
+    // Continue scanning
+    animationRef.current = requestAnimationFrame(scanFrame);
+  }, [scanning, onScan, stopScanner]);
 
   useEffect(() => {
     let mounted = true;
 
-    async function startScanner() {
-      if (!scannerRef.current || !mounted) return;
+    async function initScanner() {
+      // Check for BarcodeDetector support
+      if (!("BarcodeDetector" in window)) {
+        setSupported(false);
+        setError("Barcode scanning is not supported on this device. Please enter information manually.");
+        return;
+      }
 
       try {
-        // Dynamic import to avoid SSR issues
-        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+        // Check if PDF417 is supported
+        const formats = await window.BarcodeDetector!.getSupportedFormats();
+        console.log("[IDScanner] Supported formats:", formats);
 
-        if (!mounted) return;
+        if (!formats.includes("pdf417")) {
+          setSupported(false);
+          setError("PDF417 barcode format (used on ID cards) is not supported on this device.");
+          return;
+        }
 
-        // Configure scanner with PDF417 support (used on ID cards)
-        const scanner = new Html5Qrcode("id-scanner-container", {
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.PDF_417,
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.CODE_128, // Some IDs use this
-            Html5QrcodeSupportedFormats.CODE_39,  // Military IDs often use this
-          ],
-          verbose: false,
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true, // Use native browser API if available
+        setSupported(true);
+
+        // Create detector with PDF417 and other common ID formats
+        const supportedFormats = ["pdf417"];
+        if (formats.includes("code_128")) supportedFormats.push("code_128");
+        if (formats.includes("code_39")) supportedFormats.push("code_39");
+        if (formats.includes("qr_code")) supportedFormats.push("qr_code");
+
+        detectorRef.current = new window.BarcodeDetector!({ formats: supportedFormats });
+
+        // Request camera access
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
           },
         });
-        html5QrCodeRef.current = scanner;
 
-        setScanning(true);
+        if (!mounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
 
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 15, // Higher FPS for better detection
-            qrbox: { width: 350, height: 200 }, // Larger scan area
-            aspectRatio: 1.5, // Better aspect for ID cards
-            disableFlip: false,
-          },
-          (decodedText) => {
-            // Success callback
-            console.log("[IDScanner] Scanned:", decodedText.substring(0, 50) + "...");
-            const parsed = parseIDBarcode(decodedText);
-            if (parsed) {
-              stopScanner();
-              onScan(parsed);
-            }
-          },
-          () => {
-            // Ignore scan failures (normal during scanning)
-          }
-        );
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          setScanning(true);
+        }
       } catch (err) {
         if (mounted) {
+          console.error("[IDScanner] Error:", err);
           setError(
             err instanceof Error
               ? err.message
@@ -89,16 +145,28 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
       }
     }
 
-    startScanner();
+    initScanner();
 
     return () => {
       mounted = false;
       stopScanner();
     };
-  }, [onScan, stopScanner]);
+  }, [stopScanner]);
 
-  const handleClose = async () => {
-    await stopScanner();
+  // Start scanning loop when scanning becomes true
+  useEffect(() => {
+    if (scanning) {
+      animationRef.current = requestAnimationFrame(scanFrame);
+    }
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [scanning, scanFrame]);
+
+  const handleClose = () => {
+    stopScanner();
     onClose();
   };
 
@@ -114,40 +182,57 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Hold the <strong>back</strong> of the ID card steady within the frame. Make sure the 2D barcode (PDF417) is visible.
-          </p>
+          {supported === false ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={handleClose}>Enter Manually</Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Hold the <strong>back</strong> of the ID card steady within the frame. Make sure the 2D barcode (PDF417) is visible.
+              </p>
 
-          <div
-            id="id-scanner-container"
-            ref={scannerRef}
-            className="w-full aspect-[4/3] bg-black rounded-lg overflow-hidden"
-          />
+              <div className="w-full aspect-[4/3] bg-black rounded-lg overflow-hidden relative">
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+                {/* Scan area overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-[80%] h-[40%] border-2 border-white/50 rounded-lg" />
+                </div>
+              </div>
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
+              {error && (
+                <p className="text-sm text-red-600">{error}</p>
+              )}
+
+              {scanning && !error && (
+                <p className="text-sm text-center text-muted-foreground animate-pulse">
+                  Looking for barcode... Keep steady
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleClose} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p className="font-medium">Tips for scanning:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Use good lighting (avoid glare)</li>
+                  <li>Hold 6-10 inches from camera</li>
+                  <li>Keep the card flat and parallel</li>
+                </ul>
+              </div>
+            </>
           )}
-
-          {scanning && !error && (
-            <p className="text-sm text-center text-muted-foreground animate-pulse">
-              Looking for barcode... Keep steady
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose} className="flex-1">
-              Cancel
-            </Button>
-          </div>
-
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p className="font-medium">Tips for scanning:</p>
-            <ul className="list-disc list-inside space-y-0.5">
-              <li>Use good lighting (avoid glare)</li>
-              <li>Hold 6-10 inches from camera</li>
-              <li>Keep the card flat and parallel</li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
     </div>

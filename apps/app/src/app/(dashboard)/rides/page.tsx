@@ -1,8 +1,10 @@
-import { createApiClient } from "@/lib/api/client";
+import { headers } from "next/headers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from "@staysafeos/ui";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export default async function RidesPage() {
   let rides: Array<{
@@ -19,10 +21,26 @@ export default async function RidesPage() {
   }> = [];
 
   try {
-    const api = await createApiClient();
-    const result = await api.getRides({ take: 50 });
-    rides = result.data;
-  } catch {
+    // Call internal Route Handler to get rides
+    // Route Handlers work reliably with Logto session, Server Components don't
+    const headersList = await headers();
+    const host = headersList.get("host") || "app.staysafeos.com";
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+    const cookieHeader = headersList.get("cookie") || "";
+
+    const response = await fetch(`${protocol}://${host}/api/rides?take=50`, {
+      headers: {
+        cookie: cookieHeader,
+      },
+      cache: "no-store",
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      rides = result.data || [];
+    }
+  } catch (error) {
+    console.error("[rides/page] Error:", error);
     // Use empty list if API fails
   }
 
