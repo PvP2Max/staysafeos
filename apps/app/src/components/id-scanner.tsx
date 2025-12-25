@@ -9,28 +9,24 @@ interface IDScannerProps {
   onClose: () => void;
 }
 
-// Extend Window to include BarcodeDetector
-declare global {
-  interface Window {
-    BarcodeDetector?: {
-      new (options?: { formats: string[] }): BarcodeDetectorInstance;
-      getSupportedFormats: () => Promise<string[]>;
-    };
-  }
+interface DetectedBarcode {
+  rawValue: string;
+  format: string;
 }
 
-interface BarcodeDetectorInstance {
-  detect: (image: ImageBitmapSource) => Promise<Array<{ rawValue: string; format: string }>>;
+interface BarcodeDetectorLike {
+  detect: (image: ImageBitmapSource) => Promise<DetectedBarcode[]>;
 }
 
 export function IDScanner({ onScan, onClose }: IDScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [supported, setSupported] = useState<boolean | null>(null);
+  const [initializing, setInitializing] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const detectorRef = useRef<BarcodeDetectorLike | null>(null);
   const animationRef = useRef<number>(0);
+  const lastScanRef = useRef<number>(0);
 
   const stopScanner = useCallback(() => {
     // Cancel animation frame
@@ -56,6 +52,14 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
   const scanFrame = useCallback(async () => {
     if (!videoRef.current || !detectorRef.current || !scanning) return;
 
+    // Throttle scanning to every 100ms for performance
+    const now = Date.now();
+    if (now - lastScanRef.current < 100) {
+      animationRef.current = requestAnimationFrame(scanFrame);
+      return;
+    }
+    lastScanRef.current = now;
+
     try {
       const video = videoRef.current;
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -71,7 +75,7 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
           }
         }
       }
-    } catch (err) {
+    } catch {
       // Detection errors are normal during scanning
     }
 
@@ -83,40 +87,37 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
     let mounted = true;
 
     async function initScanner() {
-      // Check for BarcodeDetector support
-      if (!("BarcodeDetector" in window)) {
-        setSupported(false);
-        setError("Barcode scanning is not supported on this device. Please enter information manually.");
-        return;
-      }
-
       try {
-        // Check if PDF417 is supported
-        const formats = await window.BarcodeDetector!.getSupportedFormats();
+        // Import the barcode-detector polyfill (uses ZXing WebAssembly)
+        // This works on all browsers including iOS Safari
+        const { BarcodeDetector } = await import("barcode-detector/pure");
+
+        if (!mounted) return;
+
+        // Check supported formats
+        const formats = await BarcodeDetector.getSupportedFormats();
         console.log("[IDScanner] Supported formats:", formats);
 
-        if (!formats.includes("pdf417")) {
-          setSupported(false);
-          setError("PDF417 barcode format (used on ID cards) is not supported on this device.");
-          return;
-        }
-
-        setSupported(true);
-
         // Create detector with PDF417 and other common ID formats
-        const supportedFormats = ["pdf417"];
+        type BarcodeFormat = "pdf417" | "code_128" | "code_39" | "qr_code";
+        const supportedFormats: BarcodeFormat[] = [];
+        if (formats.includes("pdf417")) supportedFormats.push("pdf417");
         if (formats.includes("code_128")) supportedFormats.push("code_128");
         if (formats.includes("code_39")) supportedFormats.push("code_39");
         if (formats.includes("qr_code")) supportedFormats.push("qr_code");
 
-        detectorRef.current = new window.BarcodeDetector!({ formats: supportedFormats });
+        if (supportedFormats.length === 0) {
+          throw new Error("No supported barcode formats found");
+        }
 
-        // Request camera access
+        detectorRef.current = new BarcodeDetector({ formats: supportedFormats as BarcodeFormat[] });
+
+        // Request camera access with high resolution for better barcode detection
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
           },
         });
 
@@ -131,6 +132,7 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
           setScanning(true);
+          setInitializing(false);
         }
       } catch (err) {
         if (mounted) {
@@ -140,7 +142,7 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
               ? err.message
               : "Failed to access camera. Please ensure camera permissions are granted."
           );
-          setScanning(false);
+          setInitializing(false);
         }
       }
     }
@@ -182,7 +184,7 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {supported === false ? (
+          {error ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">{error}</p>
               <Button onClick={handleClose}>Enter Manually</Button>
@@ -203,12 +205,25 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
                 />
                 {/* Scan area overlay */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-[80%] h-[40%] border-2 border-white/50 rounded-lg" />
+                  <div className="w-[85%] h-[35%] border-2 border-white/60 rounded-lg">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
+                  </div>
+                </div>
+                {/* Corner markers */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-[85%] h-[35%] relative">
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-white" />
+                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-white" />
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-white" />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-white" />
+                  </div>
                 </div>
               </div>
 
-              {error && (
-                <p className="text-sm text-red-600">{error}</p>
+              {initializing && (
+                <p className="text-sm text-center text-muted-foreground animate-pulse">
+                  Starting camera...
+                </p>
               )}
 
               {scanning && !error && (
@@ -229,6 +244,7 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
                   <li>Use good lighting (avoid glare)</li>
                   <li>Hold 6-10 inches from camera</li>
                   <li>Keep the card flat and parallel</li>
+                  <li>Center the barcode in the frame</li>
                 </ul>
               </div>
             </>
