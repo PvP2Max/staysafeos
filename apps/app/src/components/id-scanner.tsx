@@ -44,8 +44,13 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
           formatsToSupport: [
             Html5QrcodeSupportedFormats.PDF_417,
             Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128, // Some IDs use this
+            Html5QrcodeSupportedFormats.CODE_39,  // Military IDs often use this
           ],
           verbose: false,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true, // Use native browser API if available
+          },
         });
         html5QrCodeRef.current = scanner;
 
@@ -54,12 +59,14 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
         await scanner.start(
           { facingMode: "environment" },
           {
-            fps: 10,
-            qrbox: { width: 300, height: 150 },
-            aspectRatio: 2.0,
+            fps: 15, // Higher FPS for better detection
+            qrbox: { width: 350, height: 200 }, // Larger scan area
+            aspectRatio: 1.5, // Better aspect for ID cards
+            disableFlip: false,
           },
           (decodedText) => {
             // Success callback
+            console.log("[IDScanner] Scanned:", decodedText.substring(0, 50) + "...");
             const parsed = parseIDBarcode(decodedText);
             if (parsed) {
               stopScanner();
@@ -97,7 +104,7 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center justify-between">
             Scan ID Barcode
@@ -108,13 +115,13 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Position the barcode on the back of the ID card within the frame
+            Hold the <strong>back</strong> of the ID card steady within the frame. Make sure the 2D barcode (PDF417) is visible.
           </p>
 
           <div
             id="id-scanner-container"
             ref={scannerRef}
-            className="w-full aspect-[2/1] bg-black rounded-lg overflow-hidden"
+            className="w-full aspect-[4/3] bg-black rounded-lg overflow-hidden"
           />
 
           {error && (
@@ -122,8 +129,8 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
           )}
 
           {scanning && !error && (
-            <p className="text-sm text-center text-muted-foreground">
-              Scanning for PDF417 barcode...
+            <p className="text-sm text-center text-muted-foreground animate-pulse">
+              Looking for barcode... Keep steady
             </p>
           )}
 
@@ -133,9 +140,14 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
             </Button>
           </div>
 
-          <p className="text-xs text-muted-foreground text-center">
-            Supports: Driver&apos;s Licenses, State IDs, CAC Cards
-          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p className="font-medium">Tips for scanning:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Use good lighting (avoid glare)</li>
+              <li>Hold 6-10 inches from camera</li>
+              <li>Keep the card flat and parallel</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
     </div>

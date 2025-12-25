@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback } from "react";
+import { useState, useTransition, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -20,6 +20,7 @@ import {
 } from "@staysafeos/ui";
 import Link from "next/link";
 import { IDScanner } from "@/components/id-scanner";
+import { RiderSearch, type RiderSelection } from "@/components/rider-search";
 import type { AAMVAData } from "@/lib/parse-aamva";
 
 interface RecentAddress {
@@ -32,12 +33,17 @@ export default function WalkOnPage() {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [recentAddresses, setRecentAddresses] = useState<RecentAddress[]>([]);
-  const [currentLocation, setCurrentLocation] = useState<{lat: number; lng: number; address?: string} | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+
+  // Use refs for address inputs to prevent keyboard dismissal
+  const pickupRef = useRef<HTMLInputElement>(null);
+  const dropoffRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     riderName: "",
     riderPhone: "",
+    membershipId: undefined as string | undefined,
     passengerCount: "1",
     pickupAddress: "",
     pickupLat: undefined as number | undefined,
@@ -83,7 +89,6 @@ export default function WalkOnPage() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        setCurrentLocation({ lat: latitude, lng: longitude });
 
         // Reverse geocode to get address
         try {
@@ -91,7 +96,6 @@ export default function WalkOnPage() {
           if (response.ok) {
             const data = await response.json();
             const address = data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-            setCurrentLocation({ lat: latitude, lng: longitude, address });
             setFormData(prev => ({
               ...prev,
               pickupAddress: address,
@@ -122,12 +126,24 @@ export default function WalkOnPage() {
     setFormData(prev => ({ ...prev, pickupAddress: address }));
   };
 
+  const handleRiderSelect = (rider: RiderSelection) => {
+    setFormData(prev => ({
+      ...prev,
+      riderName: rider.name,
+      riderPhone: rider.phone,
+      membershipId: rider.membershipId,
+      // If rider has a home address, offer it as dropoff
+      dropoffAddress: rider.homeAddress || prev.dropoffAddress,
+    }));
+  };
+
   const handleIDScan = (data: AAMVAData) => {
     setShowScanner(false);
     setFormData(prev => ({
       ...prev,
       riderName: data.fullName || `${data.firstName} ${data.lastName}`.trim(),
       dropoffAddress: data.fullAddress || prev.dropoffAddress,
+      membershipId: undefined, // Clear any linked account when scanning ID
     }));
     setMessage("ID scanned successfully!");
   };
@@ -204,27 +220,15 @@ export default function WalkOnPage() {
                 Scan ID Card
               </Button>
 
-              <div className="space-y-2">
-                <Label htmlFor="riderName">Rider Name *</Label>
-                <Input
-                  id="riderName"
-                  value={formData.riderName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, riderName: e.target.value })}
-                  placeholder="Or scan ID to auto-fill"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="riderPhone">Phone *</Label>
-                <Input
-                  id="riderPhone"
-                  type="tel"
-                  value={formData.riderPhone}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, riderPhone: e.target.value })}
-                  required
-                />
-              </div>
+              {/* Rider Search - search accounts or manual entry */}
+              <RiderSearch
+                value={formData.riderName}
+                phone={formData.riderPhone}
+                onSelect={handleRiderSelect}
+                onNameChange={(name) => setFormData(prev => ({ ...prev, riderName: name, membershipId: undefined }))}
+                onPhoneChange={(phone) => setFormData(prev => ({ ...prev, riderPhone: phone }))}
+                required
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="passengerCount">Passengers</Label>
@@ -280,21 +284,31 @@ export default function WalkOnPage() {
                 )}
 
                 <Input
+                  ref={pickupRef}
                   id="pickupAddress"
                   value={formData.pickupAddress}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, pickupAddress: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({ ...prev, pickupAddress: value, pickupLat: undefined, pickupLng: undefined }));
+                  }}
                   placeholder="Enter pickup address or use buttons above"
                   required
+                  autoComplete="off"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="dropoffAddress">Dropoff Address *</Label>
                 <Input
+                  ref={dropoffRef}
                   id="dropoffAddress"
                   value={formData.dropoffAddress}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, dropoffAddress: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({ ...prev, dropoffAddress: value }));
+                  }}
                   required
+                  autoComplete="off"
                 />
               </div>
 
