@@ -104,16 +104,25 @@ export class DriversService {
     }
 
     // Check if there are active rides
-    const activeRides = await this.prisma.ride.count({
+    const activeRides = await this.prisma.ride.findMany({
       where: {
         vanId: van.id,
         status: { in: ["ASSIGNED", "EN_ROUTE", "PICKED_UP"] },
       },
+      select: {
+        id: true,
+        riderName: true,
+        status: true,
+        pickupAddress: true,
+      },
     });
 
-    if (activeRides > 0) {
+    if (activeRides.length > 0) {
+      const rideList = activeRides
+        .map((r) => `${r.riderName} (${r.status})`)
+        .join(", ");
       throw new BadRequestException(
-        "Cannot go offline with active rides. Complete or reassign rides first."
+        `Cannot go offline with ${activeRides.length} active ride(s): ${rideList}. Complete or reassign them first.`
       );
     }
 
@@ -256,6 +265,53 @@ export class DriversService {
 
     if (!van) {
       return [];
+    }
+
+    // Find rides assigned to this van that don't have incomplete tasks
+    // (orphaned rides - assigned but tasks were never created or all completed)
+    const orphanedRides = await this.prisma.ride.findMany({
+      where: {
+        vanId: van.id,
+        status: { in: ["ASSIGNED", "EN_ROUTE", "PICKED_UP"] },
+        tasks: {
+          none: { completedAt: null },
+        },
+      },
+    });
+
+    // Create tasks for orphaned rides so they appear in the task list
+    if (orphanedRides.length > 0) {
+      const maxPosition = await this.prisma.vanTask.aggregate({
+        where: { vanId: van.id, completedAt: null },
+        _max: { position: true },
+      });
+
+      let position = (maxPosition._max.position ?? -1) + 1;
+
+      for (const ride of orphanedRides) {
+        await this.prisma.vanTask.createMany({
+          data: [
+            {
+              vanId: van.id,
+              rideId: ride.id,
+              type: "PICKUP",
+              address: ride.pickupAddress,
+              lat: ride.pickupLat,
+              lng: ride.pickupLng,
+              position: position++,
+            },
+            {
+              vanId: van.id,
+              rideId: ride.id,
+              type: "DROPOFF",
+              address: ride.dropoffAddress,
+              lat: ride.dropoffLat,
+              lng: ride.dropoffLng,
+              position: position++,
+            },
+          ],
+        });
+      }
     }
 
     return this.prisma.vanTask.findMany({
