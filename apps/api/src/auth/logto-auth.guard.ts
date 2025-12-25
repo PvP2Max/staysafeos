@@ -44,10 +44,19 @@ export class LogtoAuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<FastifyRequest>();
 
-    // Extract and verify token
-    const token = this.logtoJwt.extractTokenFromHeader(
+    // Extract and verify token from header first, then fallback to query params
+    // (SSE connections can't set headers, so token is passed as query param)
+    let token = this.logtoJwt.extractTokenFromHeader(
       request.headers.authorization
     );
+
+    // Fallback to query param for SSE connections
+    if (!token && request.query) {
+      const queryToken = (request.query as Record<string, string>).token;
+      if (queryToken) {
+        token = queryToken;
+      }
+    }
 
     if (!token) {
       if (isPublic) return true;

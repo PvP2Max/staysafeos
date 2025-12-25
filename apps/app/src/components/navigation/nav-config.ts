@@ -77,11 +77,11 @@ export function getNavItems(role: string | null, onShiftRoles: string[] = []): N
     mainItems.push({ title: "Dispatch", href: "/dispatch", icon: Radio });
   }
 
-  // Driver Console - Driver/TC on-shift or Admin
+  // Request Console - Driver/TC on-shift or Admin
   const isDriverOrTc = hasAnyRole(role, ["DRIVER", "TC"]);
   const isOnDriverShift = onShiftRoles.includes("DRIVER") || onShiftRoles.includes("TC");
   if (isAdminLevel(role) || (isDriverOrTc && isOnDriverShift)) {
-    mainItems.push({ title: "Driver Console", href: "/driver", icon: UserCircle });
+    mainItems.push({ title: "Request Console", href: "/driver", icon: UserCircle });
   }
 
   // Vans - All staff
