@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const api = await createApiClient();
     const body = await request.json();
-    const result = await api.goOnline(body.vanId);
+    const result = await api.goOnline(body.vanId, body.lat, body.lng);
     return NextResponse.json(result);
   } catch (error) {
     console.error("[api/driver/go-online] POST Error:", error);

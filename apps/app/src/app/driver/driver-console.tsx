@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -58,6 +58,25 @@ export function DriverConsole({
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedVan, setSelectedVan] = useState("");
   const [message, setMessage] = useState("");
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get user's location on mount (required for ride optimization)
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn("Could not get location:", error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   const handleGoOnline = () => {
     if (!selectedVan) return;
@@ -67,7 +86,11 @@ export function DriverConsole({
         const response = await fetch("/api/driver/go-online", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ vanId: selectedVan }),
+          body: JSON.stringify({
+            vanId: selectedVan,
+            lat: location?.lat,
+            lng: location?.lng,
+          }),
         });
 
         if (!response.ok) throw new Error("Failed to go online");

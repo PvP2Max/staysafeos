@@ -57,7 +57,7 @@ export class DriversService {
       throw new ForbiddenException("Must be a driver or TC to claim a van");
     }
 
-    // Update van with crew
+    // Update van with crew and optional location
     const updated = await this.prisma.van.update({
       where: { id: dto.vanId },
       data: {
@@ -65,6 +65,10 @@ export class DriversService {
         driverId: isDriver ? membership.id : van.driverId,
         tcId: isTc ? membership.id : van.tcId,
         lastPing: new Date(),
+        // Set location if provided (required for optimization to work)
+        ...(dto.lat !== undefined && dto.lng !== undefined
+          ? { currentLat: dto.lat, currentLng: dto.lng }
+          : {}),
       },
       include: {
         driver: { include: { account: true } },

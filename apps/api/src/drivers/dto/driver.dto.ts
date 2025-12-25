@@ -10,6 +10,14 @@ import {
 export class GoOnlineDto {
   @IsString()
   vanId!: string;
+
+  @IsOptional()
+  @IsNumber()
+  lat?: number;
+
+  @IsOptional()
+  @IsNumber()
+  lng?: number;
 }
 
 export class LocationPingDto {

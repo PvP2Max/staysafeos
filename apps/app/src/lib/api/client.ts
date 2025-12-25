@@ -191,10 +191,10 @@ export class ApiClient {
   }
 
   // Driver endpoints
-  async goOnline(vanId: string) {
+  async goOnline(vanId: string, lat?: number, lng?: number) {
     return this.fetch("/v1/driver/go-online", {
       method: "POST",
-      body: JSON.stringify({ vanId }),
+      body: JSON.stringify({ vanId, lat, lng }),
     });
   }
 
