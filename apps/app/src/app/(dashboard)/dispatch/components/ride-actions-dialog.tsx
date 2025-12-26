@@ -217,12 +217,15 @@ export function RideActionsDialog({
           <TabsContent value="assign" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="van">Select Van</Label>
-              <Select value={selectedVanId} onValueChange={setSelectedVanId}>
+              <Select
+                value={selectedVanId || "__unassigned__"}
+                onValueChange={(v) => setSelectedVanId(v === "__unassigned__" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a van..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned (Queue)</SelectItem>
+                  <SelectItem value="__unassigned__">Unassigned (Queue)</SelectItem>
                   {availableVans.map((van) => (
                     <SelectItem key={van.id} value={van.id}>
                       {van.name} - {van.status} (Cap: {van.capacity})
