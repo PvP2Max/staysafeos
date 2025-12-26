@@ -52,9 +52,9 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
   const scanFrame = useCallback(async () => {
     if (!videoRef.current || !detectorRef.current || !scanning) return;
 
-    // Throttle scanning to every 100ms for performance
+    // Throttle scanning to every 200ms for better performance
     const now = Date.now();
-    if (now - lastScanRef.current < 100) {
+    if (now - lastScanRef.current < 200) {
       animationRef.current = requestAnimationFrame(scanFrame);
       return;
     }
@@ -62,21 +62,33 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
 
     try {
       const video = videoRef.current;
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        const barcodes = await detectorRef.current.detect(video);
+      if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+        // Create a canvas to capture the current frame
+        // This works better on some mobile browsers
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(video, 0, 0);
 
-        for (const barcode of barcodes) {
-          console.log("[IDScanner] Detected:", barcode.format, barcode.rawValue.substring(0, 50) + "...");
-          const parsed = parseIDBarcode(barcode.rawValue);
-          if (parsed) {
-            stopScanner();
-            onScan(parsed);
-            return;
+          // Try to detect from the canvas
+          const barcodes = await detectorRef.current.detect(canvas);
+
+          for (const barcode of barcodes) {
+            console.log("[IDScanner] Detected:", barcode.format, barcode.rawValue.substring(0, 100));
+            const parsed = parseIDBarcode(barcode.rawValue);
+            if (parsed) {
+              console.log("[IDScanner] Valid AAMVA data found!");
+              stopScanner();
+              onScan(parsed);
+              return;
+            }
           }
         }
       }
-    } catch {
-      // Detection errors are normal during scanning
+    } catch (err) {
+      console.error("[IDScanner] Scan error:", err);
     }
 
     // Continue scanning
@@ -98,12 +110,18 @@ export function IDScanner({ onScan, onClose }: IDScannerProps) {
         const formats = await BarcodeDetector.getSupportedFormats();
         console.log("[IDScanner] Supported formats:", formats);
 
-        // Only use PDF417 for ID cards - this prevents picking up 1D barcodes
+        // Use all available formats - parseIDBarcode will filter for valid AAMVA data
         if (!formats.includes("pdf417")) {
           throw new Error("PDF417 barcode format is not supported on this device");
         }
 
-        detectorRef.current = new BarcodeDetector({ formats: ["pdf417"] });
+        // Use all 2D formats plus some 1D, parseIDBarcode validates the content
+        type BarcodeFormat = "pdf417" | "aztec" | "data_matrix" | "qr_code" | "code_128" | "code_39";
+        const wantedFormats: BarcodeFormat[] = ["pdf417", "aztec", "data_matrix", "qr_code", "code_128", "code_39"];
+        const scanFormats = wantedFormats.filter(f => formats.includes(f));
+        console.log("[IDScanner] Using formats:", scanFormats);
+
+        detectorRef.current = new BarcodeDetector({ formats: scanFormats });
 
         // Request camera access with high resolution for better barcode detection
         const stream = await navigator.mediaDevices.getUserMedia({
