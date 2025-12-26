@@ -77,8 +77,15 @@ export function isAdminRole(role: string | null): boolean {
 }
 
 /**
- * Check if user can manage shifts/vans (DISPATCHER, EXECUTIVE, or ADMIN)
+ * Check if user can manage vans (DISPATCHER, EXECUTIVE, or ADMIN)
  */
 export function canManageOperations(role: string | null): boolean {
   return ["EXECUTIVE", "ADMIN", "DISPATCHER"].includes(role || "");
+}
+
+/**
+ * Check if user can manage shifts (EXECUTIVE or ADMIN only)
+ */
+export function canManageShifts(role: string | null): boolean {
+  return ["EXECUTIVE", "ADMIN"].includes(role || "");
 }

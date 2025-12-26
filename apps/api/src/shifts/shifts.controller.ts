@@ -19,10 +19,10 @@ export class ShiftsController {
   constructor(private readonly shiftsService: ShiftsService) {}
 
   /**
-   * Create a shift
+   * Create a shift (executives and admins only)
    */
   @Post()
-  @Roles("DISPATCHER", "EXECUTIVE", "ADMIN")
+  @Roles("EXECUTIVE", "ADMIN")
   async create(@Body() dto: CreateShiftDto) {
     return this.shiftsService.create(dto);
   }
@@ -69,19 +69,19 @@ export class ShiftsController {
   }
 
   /**
-   * Update a shift
+   * Update a shift (executives and admins only)
    */
   @Patch(":id")
-  @Roles("DISPATCHER", "EXECUTIVE", "ADMIN")
+  @Roles("EXECUTIVE", "ADMIN")
   async update(@Param("id") id: string, @Body() dto: UpdateShiftDto) {
     return this.shiftsService.update(id, dto);
   }
 
   /**
-   * Delete a shift
+   * Delete a shift (executives and admins only)
    */
   @Delete(":id")
-  @Roles("DISPATCHER", "EXECUTIVE", "ADMIN")
+  @Roles("EXECUTIVE", "ADMIN")
   async remove(@Param("id") id: string) {
     return this.shiftsService.remove(id);
   }

@@ -72,8 +72,8 @@ export function getNavItems(role: string | null, onShiftRoles: string[] = []): N
     mainItems.push({ title: "Rides", href: "/rides", icon: Car });
   }
 
-  // Dispatch - Dispatcher role or Admin (no shift requirement)
-  if (isAdminLevel(role) || role === "DISPATCHER") {
+  // Dispatch - Dispatcher, TC, or Admin (no shift requirement)
+  if (isAdminLevel(role) || hasAnyRole(role, ["DISPATCHER", "TC"])) {
     mainItems.push({ title: "Dispatch", href: "/dispatch", icon: Radio });
   }
 

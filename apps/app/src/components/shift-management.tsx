@@ -24,7 +24,7 @@ import {
   CardTitle,
   Badge,
 } from "@staysafeos/ui";
-import { Plus, Pencil, Trash2, Loader2, Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Calendar, Clock, MapPin, Users, Check } from "lucide-react";
 
 interface Shift {
   id: string;
@@ -411,6 +411,13 @@ function ShiftActionButton({
   );
 }
 
+const AVAILABLE_ROLES = [
+  { value: "DRIVER", label: "Driver" },
+  { value: "TC", label: "TC" },
+  { value: "DISPATCHER", label: "Dispatcher" },
+  { value: "SAFETY", label: "Safety" },
+] as const;
+
 function ShiftDialog({
   open,
   onOpenChange,
@@ -424,6 +431,7 @@ function ShiftDialog({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isEditing = !!shift;
 
   // Format datetime for input
   const formatDateTimeLocal = (dateStr?: string) => {
@@ -449,6 +457,7 @@ function ShiftDialog({
     title: shift?.title || "",
     description: shift?.description || "",
     role: shift?.role || "DRIVER",
+    roles: ["DRIVER"] as string[], // For multi-select when creating
     startTime: formatDateTimeLocal(shift?.startTime) || getDefaultStart(),
     endTime: formatDateTimeLocal(shift?.endTime) || getDefaultEnd(),
     slotsNeeded: shift?.slotsNeeded?.toString() || "2",
@@ -462,6 +471,7 @@ function ShiftDialog({
       title: shift.title,
       description: shift.description || "",
       role: shift.role,
+      roles: [shift.role],
       startTime: formatDateTimeLocal(shift.startTime),
       endTime: formatDateTimeLocal(shift.endTime),
       slotsNeeded: shift.slotsNeeded.toString(),
@@ -469,6 +479,15 @@ function ShiftDialog({
       notes: shift.notes || "",
     });
   }
+
+  const toggleRole = (role: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      roles: prev.roles.includes(role)
+        ? prev.roles.filter((r) => r !== role)
+        : [...prev.roles, role],
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -489,37 +508,71 @@ function ShiftDialog({
       return;
     }
 
+    if (!isEditing && formData.roles.length === 0) {
+      setError("Please select at least one role");
+      return;
+    }
+
     startTransition(async () => {
       try {
-        const url = shift ? `/api/shifts/${shift.id}` : "/api/shifts";
-        const method = shift ? "PATCH" : "POST";
+        if (isEditing) {
+          // Update existing shift (single role)
+          const response = await fetch(`/api/shifts/${shift.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: formData.title.trim(),
+              description: formData.description.trim() || undefined,
+              role: formData.role,
+              startTime: new Date(formData.startTime).toISOString(),
+              endTime: new Date(formData.endTime).toISOString(),
+              slotsNeeded: parseInt(formData.slotsNeeded) || 2,
+              location: formData.location.trim() || undefined,
+              notes: formData.notes.trim() || undefined,
+            }),
+          });
 
-        const response = await fetch(url, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: formData.title.trim(),
-            description: formData.description.trim() || undefined,
-            role: formData.role,
-            startTime: new Date(formData.startTime).toISOString(),
-            endTime: new Date(formData.endTime).toISOString(),
-            slotsNeeded: parseInt(formData.slotsNeeded) || 2,
-            location: formData.location.trim() || undefined,
-            notes: formData.notes.trim() || undefined,
-          }),
-        });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || "Failed to update shift");
+          }
+        } else {
+          // Create shifts for each selected role
+          const errors: string[] = [];
+          for (const role of formData.roles) {
+            const response = await fetch("/api/shifts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: formData.title.trim(),
+                description: formData.description.trim() || undefined,
+                role,
+                startTime: new Date(formData.startTime).toISOString(),
+                endTime: new Date(formData.endTime).toISOString(),
+                slotsNeeded: parseInt(formData.slotsNeeded) || 2,
+                location: formData.location.trim() || undefined,
+                notes: formData.notes.trim() || undefined,
+              }),
+            });
 
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          throw new Error(data.error || `Failed to ${shift ? "update" : "create"} shift`);
+            if (!response.ok) {
+              const data = await response.json().catch(() => ({}));
+              errors.push(`${role}: ${data.error || "Failed to create"}`);
+            }
+          }
+
+          if (errors.length > 0) {
+            throw new Error(errors.join(", "));
+          }
         }
 
         onSuccess();
-        if (!shift) {
+        if (!isEditing) {
           setFormData({
             title: "",
             description: "",
             role: "DRIVER",
+            roles: ["DRIVER"],
             startTime: getDefaultStart(),
             endTime: getDefaultEnd(),
             slotsNeeded: "2",
@@ -528,7 +581,7 @@ function ShiftDialog({
           });
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : `Failed to ${shift ? "update" : "create"} shift`);
+        setError(err instanceof Error ? err.message : `Failed to ${isEditing ? "update" : "create"} shift`);
       }
     });
   };
@@ -537,9 +590,9 @@ function ShiftDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{shift ? "Edit Shift" : "Add Shift"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Shift" : "Add Shift"}</DialogTitle>
           <DialogDescription>
-            {shift ? "Update shift details" : "Schedule a new volunteer shift"}
+            {isEditing ? "Update shift details" : "Schedule volunteer shifts for one or more roles"}
           </DialogDescription>
         </DialogHeader>
 
@@ -573,21 +626,50 @@ function ShiftDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DRIVER">Driver</SelectItem>
-                  <SelectItem value="TC">TC</SelectItem>
-                  <SelectItem value="DISPATCHER">Dispatcher</SelectItem>
-                  <SelectItem value="SAFETY">Safety</SelectItem>
-                </SelectContent>
-              </Select>
+              {isEditing ? (
+                <>
+                  <Label htmlFor="role">Role *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_ROLES.map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <Label>Roles *</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_ROLES.map((role) => {
+                      const isSelected = formData.roles.includes(role.value);
+                      return (
+                        <button
+                          key={role.value}
+                          type="button"
+                          onClick={() => toggleRole(role.value)}
+                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors flex items-center gap-1.5 ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background border-input hover:bg-accent"
+                          }`}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                          {role.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -645,12 +727,12 @@ function ShiftDialog({
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {shift ? "Updating..." : "Creating..."}
+                  {isEditing ? "Updating..." : "Creating..."}
                 </>
-              ) : shift ? (
+              ) : isEditing ? (
                 "Update Shift"
               ) : (
-                "Add Shift"
+                `Add ${formData.roles.length > 1 ? `${formData.roles.length} Shifts` : "Shift"}`
               )}
             </Button>
           </DialogFooter>

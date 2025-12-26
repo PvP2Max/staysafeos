@@ -1,5 +1,5 @@
 import { createApiClient } from "@/lib/api/client";
-import { getSessionData, canManageOperations } from "@/lib/session";
+import { getSessionData, canManageShifts } from "@/lib/session";
 import { ShiftManagement } from "@/components/shift-management";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export default async function ShiftsPage() {
   try {
     // Get role from internal session (avoids Logto race condition)
     const session = await getSessionData();
-    canManage = canManageOperations(session.role);
+    canManage = canManageShifts(session.role);
 
     // Fetch shifts
     const api = await createApiClient();
