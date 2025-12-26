@@ -180,13 +180,38 @@ export function DriverConsole({
                   <SelectValue placeholder="Select a van..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {initialVans.map((van) => (
-                    <SelectItem key={van.id} value={van.id}>
-                      {van.name} (Capacity: {van.capacity})
-                    </SelectItem>
-                  ))}
+                  {initialVans.filter((v) => v.status === "AVAILABLE").length === 0 ? (
+                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                      No available vans
+                    </div>
+                  ) : (
+                    initialVans
+                      .filter((v) => v.status === "AVAILABLE")
+                      .map((van) => (
+                        <SelectItem key={van.id} value={van.id}>
+                          {van.name} (Capacity: {van.capacity})
+                        </SelectItem>
+                      ))
+                  )}
                 </SelectContent>
               </Select>
+
+              {/* Show vans currently in use */}
+              {initialVans.filter((v) => v.status === "IN_USE").length > 0 && (
+                <div className="mt-4 p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-2">Vans Currently In Use:</p>
+                  <div className="space-y-1">
+                    {initialVans
+                      .filter((v) => v.status === "IN_USE")
+                      .map((van) => (
+                        <div key={van.id} className="text-sm text-muted-foreground flex justify-between">
+                          <span>{van.name}</span>
+                          <Badge className="bg-blue-100 text-blue-800">In Use</Badge>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
               <Button
                 onClick={handleGoOnline}
                 disabled={!selectedVan || isPending}

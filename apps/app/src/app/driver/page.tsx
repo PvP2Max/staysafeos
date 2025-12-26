@@ -49,7 +49,8 @@ export default async function DriverPage() {
       api.getMyTasks().catch(() => []),
     ]);
 
-    vans = vansResult.filter((v) => v.status === "AVAILABLE");
+    // Show AVAILABLE vans (can go online) and IN_USE vans (for visibility)
+    vans = vansResult.filter((v) => v.status === "AVAILABLE" || v.status === "IN_USE");
     if (statusResult) {
       currentStatus = {
         online: statusResult.online,
