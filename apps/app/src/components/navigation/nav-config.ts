@@ -72,15 +72,16 @@ export function getNavItems(role: string | null, onShiftRoles: string[] = []): N
     mainItems.push({ title: "Rides", href: "/rides", icon: Car });
   }
 
-  // Dispatch - Dispatcher, TC, or Admin (no shift requirement)
-  if (isAdminLevel(role) || hasAnyRole(role, ["DISPATCHER", "TC"])) {
+  // Dispatch - Dispatcher or Admin (no shift requirement)
+  if (isAdminLevel(role) || role === "DISPATCHER") {
     mainItems.push({ title: "Dispatch", href: "/dispatch", icon: Radio });
   }
 
-  // Request Console - Driver/TC on-shift or Admin
-  const isDriverOrTc = hasAnyRole(role, ["DRIVER", "TC"]);
-  const isOnDriverShift = onShiftRoles.includes("DRIVER") || onShiftRoles.includes("TC");
-  if (isAdminLevel(role) || (isDriverOrTc && isOnDriverShift)) {
+  // Request Console - TC (always), Driver on-shift, or Admin
+  const isDriver = role === "DRIVER";
+  const isTc = role === "TC";
+  const isOnDriverShift = onShiftRoles.includes("DRIVER");
+  if (isAdminLevel(role) || isTc || (isDriver && isOnDriverShift)) {
     mainItems.push({ title: "Request Console", href: "/driver", icon: UserCircle });
   }
 

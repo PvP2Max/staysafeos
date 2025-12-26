@@ -102,18 +102,21 @@ export const PAGE_ACCESS_RULES: Record<string, AccessCheck> = {
   "/rides": (ctx) => isStaff(ctx.role),
   "/vans": (ctx) => isStaff(ctx.role),
 
-  // Dispatcher panel: DISPATCHER, TC, or admin (no shift requirement)
+  // Dispatcher panel: DISPATCHER or admin (no shift requirement)
   "/dispatch": (ctx) => {
     if (isAdminLevel(ctx.role)) return true;
-    return hasAnyRole(ctx.role, ["DISPATCHER", "TC"]);
+    return hasRole(ctx.role, "DISPATCHER");
   },
 
-  // Driver panel: DRIVER/TC + on-shift, OR admin
+  // Driver/Request Console: DRIVER + on-shift, TC (no shift requirement), or admin
   "/driver": (ctx) => {
     if (isAdminLevel(ctx.role)) return true;
-    const isDriverOrTc = hasAnyRole(ctx.role, ["DRIVER", "TC"]);
-    const onShift = ctx.onShiftRoles.includes("DRIVER") || ctx.onShiftRoles.includes("TC");
-    return isDriverOrTc && onShift;
+    // TCs can always access to assist drivers
+    if (hasRole(ctx.role, "TC")) return true;
+    // Drivers need to be on-shift
+    const isDriver = hasRole(ctx.role, "DRIVER");
+    const onShift = ctx.onShiftRoles.includes("DRIVER");
+    return isDriver && onShift;
   },
 };
 
