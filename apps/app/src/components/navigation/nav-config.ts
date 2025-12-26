@@ -85,8 +85,8 @@ export function getNavItems(role: string | null, onShiftRoles: string[] = []): N
     mainItems.push({ title: "Request Console", href: "/driver", icon: UserCircle });
   }
 
-  // Vans - All staff
-  if (isStaff(role)) {
+  // Vans - EXECUTIVE/ADMIN only
+  if (isAdminLevel(role)) {
     mainItems.push({ title: "Vans", href: "/vans", icon: Truck });
   }
 

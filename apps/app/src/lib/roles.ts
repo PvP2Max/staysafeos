@@ -100,7 +100,9 @@ export const PAGE_ACCESS_RULES: Record<string, AccessCheck> = {
   "/training": (ctx) => isStaff(ctx.role),
   "/shifts": (ctx) => isStaff(ctx.role),
   "/rides": (ctx) => isStaff(ctx.role),
-  "/vans": (ctx) => isStaff(ctx.role),
+
+  // Vans fleet management - EXECUTIVE/ADMIN only
+  "/vans": (ctx) => isAdminLevel(ctx.role),
 
   // Dispatcher panel: DISPATCHER or admin (no shift requirement)
   "/dispatch": (ctx) => {
