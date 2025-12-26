@@ -23,19 +23,28 @@ export function useDispatchSSE({
 }: UseDispatchSSEProps) {
   const handleMessage = useCallback(
     (event: SSEEvent) => {
+      // Guard against missing data
+      if (!event?.data || !event?.type) return;
+
       switch (event.type) {
         case "ride.created":
-          onRideCreated?.(event.data as Ride);
+          if ((event.data as Ride)?.id) {
+            onRideCreated?.(event.data as Ride);
+          }
           break;
         case "ride.updated":
         case "ride.cancelled":
         case "ride.completed":
-          onRideUpdated?.(event.data as Ride);
+          if ((event.data as Ride)?.id) {
+            onRideUpdated?.(event.data as Ride);
+          }
           break;
         case "van.updated":
         case "van.online":
         case "van.offline":
-          onVanUpdated?.(event.data as Van);
+          if ((event.data as Van)?.id) {
+            onVanUpdated?.(event.data as Van);
+          }
           break;
       }
     },
@@ -76,6 +85,7 @@ export function useDispatchState(
   }, [initialVans]);
 
   const handleRideCreated = useCallback((ride: Ride) => {
+    if (!ride?.id) return; // Guard against malformed data
     setRides((prev) => {
       // Avoid duplicates
       if (prev.some((r) => r.id === ride.id)) {
@@ -86,10 +96,12 @@ export function useDispatchState(
   }, []);
 
   const handleRideUpdated = useCallback((ride: Ride) => {
+    if (!ride?.id) return; // Guard against malformed data
     setRides((prev) => prev.map((r) => (r.id === ride.id ? ride : r)));
   }, []);
 
   const handleVanUpdated = useCallback((van: Van) => {
+    if (!van?.id) return; // Guard against malformed data
     setVans((prev) => prev.map((v) => (v.id === van.id ? van : v)));
   }, []);
 

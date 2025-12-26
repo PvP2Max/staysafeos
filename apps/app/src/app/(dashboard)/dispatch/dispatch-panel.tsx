@@ -40,14 +40,16 @@ export function DispatchPanel({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  // Filter rides by status
-  const pendingRides = rides.filter((r) => r.status === "PENDING");
-  const activeRides = rides.filter(
+  // Filter rides by status - ensure rides have valid IDs
+  const validRides = rides.filter((r) => r?.id);
+  const pendingRides = validRides.filter((r) => r.status === "PENDING");
+  const activeRides = validRides.filter(
     (r) => r.status === "ASSIGNED" || r.status === "EN_ROUTE" || r.status === "PICKED_UP"
   );
 
-  // Filter vans
-  const availableVans = vans.filter(
+  // Filter vans - ensure vans have valid IDs
+  const validVans = vans.filter((v) => v?.id);
+  const availableVans = validVans.filter(
     (v) => v.status === "AVAILABLE" || v.status === "IN_USE"
   );
 

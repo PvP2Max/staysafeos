@@ -167,7 +167,8 @@ export function AddressAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
-          disabled={disabled || loading || geoLoading}
+          disabled={disabled || geoLoading}
+          autoComplete="off"
           className="pr-10"
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
