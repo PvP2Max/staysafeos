@@ -23,7 +23,6 @@ export function CreateRideForm({ vans, showSkipAutoAssign = false }: CreateRideF
     riderName: "",
     riderPhone: "",
     membershipId: undefined as string | undefined,
-    passengerCount: "1",
     pickupAddress: "",
     pickupLat: undefined as number | undefined,
     pickupLng: undefined as number | undefined,
@@ -79,7 +78,7 @@ export function CreateRideForm({ vans, showSkipAutoAssign = false }: CreateRideF
           body: JSON.stringify({
             riderName: formData.riderName,
             riderPhone: formData.riderPhone,
-            passengerCount: parseInt(formData.passengerCount),
+            passengerCount: 1,
             pickupAddress: formData.pickupAddress,
             pickupLat: formData.pickupLat,
             pickupLng: formData.pickupLng,
@@ -102,7 +101,6 @@ export function CreateRideForm({ vans, showSkipAutoAssign = false }: CreateRideF
           riderName: "",
           riderPhone: "",
           membershipId: undefined,
-          passengerCount: "1",
           pickupAddress: "",
           pickupLat: undefined,
           pickupLng: undefined,
@@ -163,25 +161,7 @@ export function CreateRideForm({ vans, showSkipAutoAssign = false }: CreateRideF
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor="passengerCount">Passengers</Label>
-          <Select
-            value={formData.passengerCount}
-            onValueChange={(value: string) => setFormData({ ...formData, passengerCount: value })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="priority">Priority</Label>
           <Select

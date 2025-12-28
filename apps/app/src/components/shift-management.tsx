@@ -24,7 +24,7 @@ import {
   CardTitle,
   Badge,
 } from "@staysafeos/ui";
-import { Plus, Pencil, Trash2, Loader2, Calendar, Clock, MapPin, Users, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Calendar, Clock, MapPin, Users, Check, AlertCircle } from "lucide-react";
 
 interface Shift {
   id: string;
@@ -50,9 +50,10 @@ interface Shift {
 interface ShiftManagementProps {
   shifts: Shift[];
   canManage: boolean;
+  error?: string | null;
 }
 
-export function ShiftManagement({ shifts, canManage }: ShiftManagementProps) {
+export function ShiftManagement({ shifts, canManage, error }: ShiftManagementProps) {
   const router = useRouter();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
@@ -90,6 +91,17 @@ export function ShiftManagement({ shifts, canManage }: ShiftManagementProps) {
           </Button>
         )}
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-destructive">Failed to load shifts</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-3">

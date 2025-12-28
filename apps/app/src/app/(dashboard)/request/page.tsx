@@ -13,7 +13,7 @@ import {
   Label,
   Textarea,
 } from "@staysafeos/ui";
-import { Send, Phone, User, Users } from "lucide-react";
+import { Send, Phone, User } from "lucide-react";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 interface UserProfile {
@@ -35,7 +35,6 @@ export default function RequestRidePage() {
   const [formData, setFormData] = useState({
     riderName: "",
     riderPhone: "",
-    passengerCount: 1,
     pickupAddress: "",
     pickupLat: undefined as number | undefined,
     pickupLng: undefined as number | undefined,
@@ -92,7 +91,7 @@ export default function RequestRidePage() {
           body: JSON.stringify({
             riderName: formData.riderName,
             riderPhone: formData.riderPhone,
-            passengerCount: formData.passengerCount,
+            passengerCount: 1,
             pickupAddress: formData.pickupAddress,
             pickupLat: formData.pickupLat,
             pickupLng: formData.pickupLng,
@@ -112,7 +111,6 @@ export default function RequestRidePage() {
         // Reset form (but keep name/phone from profile)
         setFormData((prev) => ({
           ...prev,
-          passengerCount: 1,
           pickupAddress: "",
           pickupLat: undefined,
           pickupLng: undefined,
@@ -215,22 +213,6 @@ export default function RequestRidePage() {
                 placeholder="(555) 123-4567"
                 value={formData.riderPhone}
                 onChange={(e) => setFormData({ ...formData, riderPhone: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="passengerCount" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Number of Passengers
-              </Label>
-              <Input
-                id="passengerCount"
-                type="number"
-                min="1"
-                max="10"
-                value={formData.passengerCount}
-                onChange={(e) => setFormData({ ...formData, passengerCount: parseInt(e.target.value) || 1 })}
                 required
               />
             </div>
