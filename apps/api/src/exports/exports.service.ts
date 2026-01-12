@@ -14,6 +14,8 @@ export interface RideExportRow {
   truckCommanderEmail: string | null;
   vanName: string | null;
   requestDate: string;
+  requestTime: string;
+  pickupTime: string | null;
   dropoffTime: string | null;
   pickupAddress: string;
   dropoffAddress: string;
@@ -76,10 +78,44 @@ export class ExportsService {
   }
 
   /**
+   * Format a date in the given timezone
+   */
+  private formatDateInTimezone(date: Date, timezone: string): { date: string; time: string } {
+    try {
+      const dateStr = date.toLocaleDateString("en-US", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const timeStr = date.toLocaleTimeString("en-US", {
+        timeZone: timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      return { date: dateStr, time: timeStr };
+    } catch {
+      // Fallback if timezone is invalid
+      return {
+        date: date.toISOString().split("T")[0],
+        time: date.toISOString().split("T")[1].slice(0, 5),
+      };
+    }
+  }
+
+  /**
    * Export rides data with TC, van, and rider membership joins
    */
   async exportRides(startDate: Date, endDate: Date): Promise<RideExportRow[]> {
     const org = this.requestContext.requireOrganization();
+
+    // Get organization's timezone
+    const orgSettings = await this.prisma.organizationSettings.findUnique({
+      where: { organizationId: org.id },
+      select: { timezone: true },
+    });
+    const timezone = orgSettings?.timezone || "America/Chicago";
 
     const rides = await this.prisma.ride.findMany({
       where: {
@@ -128,6 +164,14 @@ export class ExportsService {
         ? `${ride.tc.account.firstName || ""} ${ride.tc.account.lastName || ""}`.trim()
         : null;
 
+      const requestDateTime = this.formatDateInTimezone(ride.createdAt, timezone);
+      const pickupDateTime = ride.pickedUpAt
+        ? this.formatDateInTimezone(ride.pickedUpAt, timezone)
+        : null;
+      const dropoffDateTime = ride.completedAt
+        ? this.formatDateInTimezone(ride.completedAt, timezone)
+        : null;
+
       return {
         rideUuid: ride.id,
         riderName: ride.riderName,
@@ -138,8 +182,10 @@ export class ExportsService {
         truckCommander: tcName || null,
         truckCommanderEmail: ride.tc?.account?.email || null,
         vanName: ride.van?.name || null,
-        requestDate: ride.createdAt.toISOString(),
-        dropoffTime: ride.completedAt?.toISOString() || null,
+        requestDate: requestDateTime.date,
+        requestTime: requestDateTime.time,
+        pickupTime: pickupDateTime?.time || null,
+        dropoffTime: dropoffDateTime?.time || null,
         pickupAddress: ride.pickupAddress,
         dropoffAddress: ride.dropoffAddress,
         rideStatus: ride.status,
