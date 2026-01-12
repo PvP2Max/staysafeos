@@ -45,11 +45,11 @@ export function AccountMenu({
 
   const displayName = user.firstName && user.lastName
     ? `${user.firstName} ${user.lastName}`
-    : user.email.split("@")[0];
+    : user.email?.split("@")[0] || "User";
 
   const initials = user.firstName && user.lastName
     ? `${user.firstName[0]}${user.lastName[0]}`
-    : user.email[0].toUpperCase();
+    : user.email?.[0]?.toUpperCase() || "?";
 
   const handlePasswordReset = () => {
     // Redirect to Logto for password reset
