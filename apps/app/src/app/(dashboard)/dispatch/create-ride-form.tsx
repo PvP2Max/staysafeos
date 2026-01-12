@@ -78,6 +78,7 @@ export function CreateRideForm({ vans, showSkipAutoAssign = false }: CreateRideF
           body: JSON.stringify({
             riderName: formData.riderName,
             riderPhone: formData.riderPhone,
+            riderMembershipId: formData.membershipId,
             passengerCount: 1,
             pickupAddress: formData.pickupAddress,
             pickupLat: formData.pickupLat,

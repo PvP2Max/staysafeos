@@ -97,6 +97,7 @@ model Membership {
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
   // Relations
+  riderRides           Ride[]               @relation("RideRider")
   driverRides          Ride[]               @relation("RideDriver")
   tcRides              Ride[]               @relation("RideTC")
   dispatcherRides      Ride[]               @relation("RideDispatcher")
@@ -311,6 +312,10 @@ model Ride {
   // Van assignment
   vanId          String?      @map("van_id")
   van            Van?         @relation(fields: [vanId], references: [id])
+
+  // Rider account link (for exports - rank, email, unit)
+  riderMembershipId String?     @map("rider_membership_id")
+  riderMembership   Membership? @relation("RideRider", fields: [riderMembershipId], references: [id])
 
   // Crew assignment
   driverId       String?      @map("driver_id")

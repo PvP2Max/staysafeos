@@ -46,6 +46,7 @@ export class RidesService {
         notes: dto.notes,
         priority: dto.priority ?? 0,
         status: RideStatus.PENDING,
+        riderMembershipId: dto.riderMembershipId,
       },
       include: {
         van: true,
@@ -87,6 +88,7 @@ export class RidesService {
         dispatcherId: membership?.id,
         assignedAt: dto.vanId ? new Date() : undefined,
         skipAutoAssign: dto.skipAutoAssign ?? false,
+        riderMembershipId: dto.riderMembershipId,
       },
       include: {
         van: true,

@@ -20,6 +20,7 @@ import { GlobalStatsModule } from "./global-stats/global-stats.module";
 import { DomainsModule } from "./domains/domains.module";
 import { OsrmModule } from "./osrm/osrm.module";
 import { OptimizationModule } from "./optimization/optimization.module";
+import { ExportsModule } from "./exports/exports.module";
 import { RequestContextMiddleware } from "./common/middleware/request-context.middleware";
 
 @Module({
@@ -48,6 +49,7 @@ import { RequestContextMiddleware } from "./common/middleware/request-context.mi
     DomainsModule,
     OsrmModule,
     OptimizationModule,
+    ExportsModule,
   ],
 })
 export class AppModule implements NestModule {

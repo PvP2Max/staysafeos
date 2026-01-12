@@ -59,6 +59,10 @@ export class CreateRideDto {
   @Min(0)
   @Max(10)
   priority?: number = 0;
+
+  @IsOptional()
+  @IsString()
+  riderMembershipId?: string;
 }
 
 export class CreateManualRideDto extends CreateRideDto {
