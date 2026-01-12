@@ -16,6 +16,7 @@ import {
   Activity,
 } from "lucide-react";
 import { createApiClient } from "@/lib/api/client";
+import { ExportCard } from "./export-card";
 
 export const dynamic = "force-dynamic";
 
@@ -187,6 +188,9 @@ export default async function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Export Data */}
+      <ExportCard />
     </div>
   );
 }
